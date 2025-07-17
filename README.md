@@ -39,6 +39,7 @@ mercato/
 │   ├── Model/                # Modelos de dados (ex: Produto.php, Cliente.php)
 │   ├── Service/              # Regras de negócio (ex: CompraService.php)
 │   ├── DTO/                  # Objetos de Transferência de Dados (ex: ProdutoDTO.php)
+│   ├── Middleware/           # filtros que rodam antes ou depois da execução da rota
 │   └── View/                 # Templates HTML/Bootstrap organizados por tela
 │       ├── cliente/
 │       ├── usuario/
@@ -55,6 +56,10 @@ mercato/
 │   ├── ProdutoTest.php       # Teste de unidade para Produto
 │   ├── ClienteTest.php       # Teste de unidade para Cliente
 │   └── CompraTest.php        # Teste de unidade para Compra
+├── database/                 # arquivos .sql que criam as tabelas
+│   ├── schema.sql
+│   ├── seed.sql
+│   └── migrations/
 ├── docker/
 │   ├── php/
 │   │   └── Dockerfile        # Dockerfile para o container PHP
