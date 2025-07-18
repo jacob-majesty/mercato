@@ -1,0 +1,28 @@
+{
+    "name": "majesty/mercato",
+    "description": "Sistema de compra e venda de produtos em PHP",
+    "minimum-stability": "dev",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jacob Majesty",
+            "email": "dev.majesty.code@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "scripts": {
+        "run-phpunit": "vendor/bin/phpunit"
+    }
+}
