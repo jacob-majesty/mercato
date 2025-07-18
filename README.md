@@ -74,6 +74,43 @@ mercato/
 
 ````
 
+### **Passo 3: Instalação do Composer no Container**  
+
+**Objetivo:**  
+Instalar o Composer exclusivamente dentro do container Docker para manter o ambiente de desenvolvimento isolado e consistente.  
+
+**Passos:**  
+1. Acesse o container:  
+   ```sh
+   docker-compose exec app bash
+   ```  
+
+2. Instale o Composer:  
+   ```sh
+   curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+   ```  
+
+3. Saia e instale as dependências:  
+   ```sh
+   exit
+   docker-compose exec app composer install
+   ```  
+
+**Por que fazer isso?**  
+- Elimina a necessidade de instalar PHP/Composer no host.  
+- Garante consistência entre ambientes (desenvolvimento, testes, produção).  
+- Isola as dependências do projeto (`vendor/`) dentro do container.  
+
+**Observações:**  
+- O diretório `vendor/` é recriado automaticamente ao rodar `composer install` no container.  
+- Para adicionar dependências:  
+  ```sh
+  docker-compose exec app composer require pacote/nome
+  ```  
+
+Esta abordagem mantém o host limpo e o projeto portável.
+
+
 ## Como Rodar o Projeto
 
 1. **Clone o repositório**
