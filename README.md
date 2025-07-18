@@ -11,6 +11,39 @@
 * Cadastro e gestão de clientes
 * Controle de usuários do sistema (login e autenticação)
 * Relatórios básicos de vendas
+### Resumo Profissional - Controle de Acessos no Mercato
+
+**Objetivo:**  
+Implementar três perfis de usuário (Admin, Vendedor, Cliente) para garantir segurança, controle de acesso e aderência às regras de negócio.
+
+**Benefícios-Chave:**
+
+- **Controle de Acesso Granular**  
+  - Admins: Acesso total ao sistema  
+  - Vendedores: Gerenciam apenas seus produtos e clientes relacionados  
+  - Clientes: Acesso limitado ao próprio histórico de compras  
+
+- **Segurança Reforçada**  
+  - Aplicação do princípio do menor privilégio  
+  - Redução de superfície de ataque e riscos de dados  
+
+- **Lógica de Autorização Simplificada**  
+  - Middlewares dedicados (authMiddleware, ownerMiddleware, adminMiddleware)  
+  - Código modular e de fácil manutenção  
+
+- **Base para Escalabilidade**  
+  - Estrutura pronta para adição de novas funcionalidades por perfil  
+  - Suporte a futuras integrações sem refatoração complexa  
+
+- **Alinhamento com Regras de Negócio**  
+  - Modelagem reflete as reais necessidades da plataforma  
+  - Experiência intuitiva para cada tipo de usuário  
+
+**Implementação:**  
+- Definição clara de permissões por role  
+- Middlewares específicos para validação de acesso  
+- Segregação de visualizações e funcionalidades na interface
+
 
 ## Tecnologias Utilizadas
 
