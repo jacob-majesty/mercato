@@ -86,7 +86,11 @@ Contrato claro: Define métodos obrigatórios, garantindo coesão.
 - Flexibilidade: Migre de ORM ou banco de dados sem refatorar Services.
 - Manutenção simplificada: Alterações na persistência ficam contidas no Repository.
 
-
+## Gerador de pdf no Utility
+- Instalação do Dompdf: Lembre-se de rodar composer require dompdf/dompdf no seu terminal para que a classe Dompdf esteja disponível.
+- Fontes no Dompdf: Para caracteres especiais e acentuação, é crucial configurar uma fonte que os suporte (DejaVu Sans é uma boa opção padrão para isso no Dompdf).
+- Caminhos (storagePath): Ajuste o storagePath no construtor de PdfGenerator conforme a estrutura do seu projeto. 
+O exemplo __DIR__ . '/../../public/uploads/receipts' assume que você tem uma pasta public/uploads/receipts acessível via web.
 
 ## Tecnologias Utilizadas
 
@@ -130,6 +134,7 @@ mercato/
 │   └── assets/               # Arquivos estáticos (CSS, JS, imagens)
 ├── routes/
 │   └── web.php               # Definição das rotas da aplicação
+├── Utility                   # Implementação do gerador de pdf com dompdf
 ├── tests/
 │   ├── ProdutoTest.php       # Teste de unidade para Produto
 │   ├── ClienteTest.php       # Teste de unidade para Cliente
