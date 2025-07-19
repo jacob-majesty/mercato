@@ -92,6 +92,7 @@ mercato/
 ├── app/
 │   ├── Controller/           # Lógica de controle e rotas (ex: ProdutoController.php)
 │   ├── Model/                # Modelos de dados (ex: Produto.php, Cliente.php)
+    ├── Interfaces/           # Definição do "contrato" que as classes do Service devem seguir
 │   ├── Service/              # Regras de negócio (ex: CompraService.php)
 │   ├── DTO/                  # Objetos de Transferência de Dados (ex: ProdutoDTO.php)
 │   ├── Middleware/           # filtros que rodam antes ou depois da execução da rota
