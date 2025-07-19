@@ -65,6 +65,27 @@ Contrato claro: Define métodos obrigatórios, garantindo coesão.
 
  **Benefícios**: Manutenibilidade, escalabilidade e aderência a SOLID.
 
+## Camada Repository: Separação de Responsabilidades em MVC
+
+- Separação clara de preocupações (SOLID - SRP):
+
+- Service: Lógica de negócio.
+
+- Repository: Persistência de dados (CRUD).
+
+- Abstração do banco de dados:
+
+- Troque o mecanismo de persistência (MySQL → MongoDB) sem impactar os Services.
+
+- Testabilidade: Mock de repositórios em testes unitários (isolamento da lógica de negócio).
+
+- Reusabilidade: Centraliza consultas complexas para uso em múltiplos Services.
+
+**Benefícios Chave**
+- Código mais limpo: Services focam em regras, Repositories em dados.
+- Flexibilidade: Migre de ORM ou banco de dados sem refatorar Services.
+- Manutenção simplificada: Alterações na persistência ficam contidas no Repository.
+
 
 
 ## Tecnologias Utilizadas
@@ -92,8 +113,10 @@ mercato/
 ├── app/
 │   ├── Controller/           # Lógica de controle e rotas (ex: ProdutoController.php)
 │   ├── Model/                # Modelos de dados (ex: Produto.php, Cliente.php)
-    ├── Interfaces/           # Definição do "contrato" que as classes do Service devem seguir
+│   ├── Interfaces/           # Definição do "contrato" que as classes do Service devem seguir
 │   ├── Service/              # Regras de negócio (ex: CompraService.php)
+│   ├── Interfaces/Repository/
+│   ├── Repository            # Camada de persistência de dados
 │   ├── DTO/                  # Objetos de Transferência de Dados (ex: ProdutoDTO.php)
 │   ├── Middleware/           # filtros que rodam antes ou depois da execução da rota
 │   └── View/                 # Templates HTML/Bootstrap organizados por tela
