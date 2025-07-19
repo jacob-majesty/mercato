@@ -116,6 +116,7 @@ O exemplo __DIR__ . '/../../public/uploads/receipts' assume que você tem uma pa
 mercato/
 ├── app/
 │   ├── Controller/           # Lógica de controle e rotas (ex: ProdutoController.php)
+│   ├── Core/                 # Gerenciar o sistema de rotas
 │   ├── Model/                # Modelos de dados (ex: Produto.php, Cliente.php)
 │   ├── Interfaces/           # Definição do "contrato" que as classes do Service e Repository devem seguir
 │   ├── Service/              # Regras de negócio (ex: CompraService.php)
