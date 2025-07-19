@@ -122,7 +122,8 @@ mercato/
 │   ├── Service/              # Regras de negócio (ex: CompraService.php)
 │   ├── Repository            # Camada de persistência de dados
 │   ├── DTO/                  # Objetos de Transferência de Dados (ex: ProdutoDTO.php)
-│   ├── Middleware/           # filtros que rodam antes ou depois da execução da rota
+|   ├── Helper/               # Padronizar as respostas JSON da API
+│   ├── Middleware/           # Filtros que rodam antes ou depois da execução da rota
 │   └── View/                 # Templates HTML/Bootstrap organizados por tela
 │       ├── cliente/
 │       ├── usuario/
