@@ -44,6 +44,28 @@ Implementar três perfis de usuário (Admin, Vendedor, Cliente) para garantir se
 - Middlewares específicos para validação de acesso  
 - Segregação de visualizações e funcionalidades na interface
 
+## Uso de Interfaces em Services 
+````php
+interface IProductService {  
+    public function createProduct(array $data): Product;  
+}  
+
+class ProductService implements IProductService {  
+    // Implementação...  
+}  
+````
+
+Contrato claro: Define métodos obrigatórios, garantindo coesão.
+
+- Desacoplamento: Permite trocar implementações sem afetar dependentes (ex.: DatabaseService → APIService).
+
+- Testabilidade: Facilita mocking em testes unitários.
+
+- Polimorfismo: Múltiplas implementações para o mesmo comportamento (ex.: PaymentService vs PayPalService).
+
+ **Benefícios**: Manutenibilidade, escalabilidade e aderência a SOLID.
+
+
 
 ## Tecnologias Utilizadas
 
