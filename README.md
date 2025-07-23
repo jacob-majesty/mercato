@@ -332,6 +332,7 @@ mercato/
 │   ├── Repository            # Camada de persistência de dados
 │   ├── DTO/                  # Objetos de Transferência de Dados (ex: ProdutoDTO.php)
 |   ├── Helper/               # Padronizar as respostas JSON da API
+|   ├── Util                  # Autenticação de usuários e padronização das respostas HTTP (API)
 │   ├── Middleware/           # Filtros que rodam antes ou depois da execução da rota
 │   └── View/                 # Templates HTML/Bootstrap organizados por tela
 │       ├── cliente/
