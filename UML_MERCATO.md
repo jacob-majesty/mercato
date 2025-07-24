@@ -6,6 +6,7 @@ classDiagram
         -email: string
         -firstName: string
         -lastName: string
+        -role %% admin seller client
         -pswd: string
         -createdAt: Date
 
