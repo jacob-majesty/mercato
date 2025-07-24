@@ -29,7 +29,6 @@ classDiagram
     }
 
     class Seller {
-        -sellerName: string
         +getMyProducts(): Product[]
         +updateProduct(productId: int, data: any)
         +addProduct(productData: any)
