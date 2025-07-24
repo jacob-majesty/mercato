@@ -4,6 +4,8 @@ classDiagram
     class User {
         -id: int (auto increment)
         -email: string
+        -firstName: string
+        -lastName: string
         -pswd: string
         -createdAt: Date
 
@@ -38,8 +40,6 @@ classDiagram
     }
 
     class Client {
-        -firstName: string
-        -lastName: string
         +addToCart(productId: number, quantity: number)
         +removeFromCart(productId: number)
         +viewCart(): Cart
