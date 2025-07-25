@@ -207,4 +207,36 @@ class ProductRepository implements ProductRepositoryInterface
 
         return $products;
     }
+
+     /**
+     * Implementação da busca paginada.
+     * @param int $limit
+     * @param int $offset
+     * @return Product[]
+     */
+    public function findPaginated(int $limit, int $offset): array
+    {
+        // Certifique-se de que a ordem (ORDER BY) é consistente para paginação
+        $sql = "SELECT * FROM products ORDER BY id ASC LIMIT :limit OFFSET :offset";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $products = [];
+        while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $products[] = $this->hydrateProduct($data);
+        }
+        return $products;
+    }
+
+    /**
+     * Implementação da contagem total de produtos.
+     * @return int
+     */
+    public function countAll(): int
+    {
+        $stmt = $this->pdo->query("SELECT COUNT(*) FROM products");
+        return (int) $stmt->fetchColumn();
+    }
 }

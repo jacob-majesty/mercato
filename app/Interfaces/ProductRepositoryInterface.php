@@ -35,5 +35,19 @@ interface ProductRepositoryInterface
         ?float $minPrice = null,
         ?float $maxPrice = null
     ): array;
+
+     /**
+     * Busca produtos com paginação.
+     * @param int $limit Número máximo de produtos por página.
+     * @param int $offset Número de produtos a pular (início da página).
+     * @return Product[]
+     */
+    public function findPaginated(int $limit, int $offset): array;
+
+    /**
+     * Conta o número total de produtos.
+     * @return int
+     */
+    public function countAll(): int;
  
 }
