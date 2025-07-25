@@ -1,3 +1,8 @@
+<?php
+
+// Este é o arquivo de layout principal que todas as outras views irão incluir.
+// Ele agora inclui os partials de header e footer para modularidade.
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -16,77 +21,21 @@
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">Mercato</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/products">Produtos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/cart">Carrinho</a>
-                    </li>
-                    <?php if (\App\Core\Authenticator::check()): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/orders">Meus Pedidos</a>
-                        </li>
-                        <?php if (\App\Core\Authenticator::isAdmin()): ?>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/admin/dashboard">Admin Dashboard</a>
-                            </li>
-                        <?php elseif (\App\Core\Authenticator::isSeller()): ?>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/seller/dashboard">Vendedor Dashboard</a>
-                            </li>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </ul>
-                <ul class="navbar-nav">
-                    <?php if (\App\Core\Authenticator::check()): ?>
-                        <li class="nav-item">
-                            <span class="nav-link text-white">Olá, <?= htmlspecialchars(\App\Core\Authenticator::user()->getFirstName() ?? 'Usuário') ?>!</span>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link btn btn-outline-light ms-2" href="/logout">Sair</a>
-                        </li>
-                    <?php else: ?>
-                        <li class="nav-item">
-                            <a class="nav-link btn btn-outline-light" href="/login">Entrar</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link btn btn-outline-light ms-2" href="/register">Registrar</a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php
+    // Inclui o partial do cabeçalho.
+    // Ele contém a navbar e abre a div.container.
+    include __DIR__ . '/partials/header.php';
+    ?>
 
-    <div class="container mt-4">
-        <?php
-        // Conteúdo específico de cada página será inserido aqui
-        // Isso é um placeholder para o conteúdo que vem de outras views
-        if (isset($content)) {
-            echo $content;
-        }
-        ?>
-    </div>
+    <!-- O conteúdo específico de cada página será inserido aqui -->
+    <?php
+    if (isset($content)) {
+        echo $content;
+    }
+    ?>
 
-    <footer class="footer">
-        <p>&copy; <?= date('Y') ?> Mercato. Todos os direitos reservados.</p>
-    </footer>
-
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-
-    <!-- Seu JavaScript personalizado -->
-    <script src="/assets/js/script.js"></script>
-</body>
-</html>
+    <?php
+    // Inclui o partial do rodapé.
+    // Ele fecha a div.container, adiciona o footer e inclui os scripts JS.
+    include __DIR__ . '/partials/footer.php';
+    ?>
