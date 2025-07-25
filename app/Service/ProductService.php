@@ -308,4 +308,52 @@ class ProductService
         );
     }
 
+     /**
+     * Obtém produtos disponíveis com paginação.
+     * @param int $page A página atual (começa em 1).
+     * @param int $itemsPerPage O número de itens por página.
+     * @return array Um array contendo 'products' e 'totalPages'.
+     */
+    public function getAvailableProductsPaginated(int $page, int $itemsPerPage): array
+    {
+        if ($page < 1) {
+            $page = 1;
+        }
+        if ($itemsPerPage < 1) {
+            $itemsPerPage = 10; // Valor padrão razoável
+        }
+
+        $offset = ($page - 1) * $itemsPerPage;
+
+        // Primeiro, obtenha o total de itens para calcular o total de páginas
+        $totalItems = $this->productRepository->countAll(); // Ou um método para contar apenas disponíveis
+
+        // Calcule o total de páginas
+        $totalPages = ceil($totalItems / $itemsPerPage);
+
+        // Garante que a página não excede o total de páginas
+        if ($page > $totalPages && $totalPages > 0) {
+            $page = $totalPages;
+            $offset = ($page - 1) * $itemsPerPage;
+        }
+
+        // Obtém os produtos para a página atual
+        $products = $this->productRepository->findPaginated($itemsPerPage, $offset);
+
+        // Filtrar produtos disponíveis (se `findPaginated` não fizer isso)
+        $availableProducts = [];
+        foreach ($products as $product) {
+            if ($product->checkStock(1)) { // Verifica se há pelo menos 1 item disponível
+                $availableProducts[] = $product;
+            }
+        }
+
+        return [
+            'products' => $availableProducts,
+            'currentPage' => $page,
+            'totalItems' => $totalItems,
+            'totalPages' => (int) $totalPages // Garante que seja um inteiro
+        ];
+    }
+
 }
