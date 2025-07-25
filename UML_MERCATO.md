@@ -4,6 +4,9 @@ classDiagram
     class User {
         -id: int (auto increment)
         -email: string
+        -firstName: string
+        -lastName: string
+        -role %% admin seller client
         -pswd: string
         -createdAt: Date
 
@@ -26,7 +29,6 @@ classDiagram
     }
 
     class Seller {
-        -sellerName: string
         +getMyProducts(): Product[]
         +updateProduct(productId: int, data: any)
         +addProduct(productData: any)
@@ -38,8 +40,6 @@ classDiagram
     }
 
     class Client {
-        -firstName: string
-        -lastName: string
         +addToCart(productId: number, quantity: number)
         +removeFromCart(productId: number)
         +viewCart(): Cart
@@ -64,23 +64,24 @@ classDiagram
         +checkStock(quantity: int): bool
         +reserveStock(quantity: int): void
         +releaseStock(quantity: int): void
-        +updateStock(quantity: int): void
+        +decrementStock(quantity: int): void
     }
 
     class Order {
         -id: int
         -clientId: int
         -status: string %% PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELED
-        -createdAt: DateTime
+        -orderDate: DateTime
         -totalAmount: float
         -paymentMethod: string
         -address: Address
         -items: OrderItem[]
 
+        +addItem(OrderItem $item): void
+        +removeItem(OrderItem $item): void
         +processOrder(): void
-        +updateStatus(newStatus: string): void
         +cancelOrder(): void
-        +calculateTotal(): void
+        +calculateTotal(): float
     }
 
     class OrderItem {
@@ -90,33 +91,25 @@ classDiagram
         -productName: string
         -quantity: int
         -unitPrice: float
-        -imageUrl: string
     }
 
     class Log {
         -id: int
         -type: string %% e.g., "PURCHASE", "ERROR", "ADMIN_ACTION"
         -userId: int
-        -orderId: int? %% Chave estrangeira opcional para Order
         -action: string
         -timestamp: DateTime
-        -details: JSON
-
-        +logEvent(userId: int, type: string, action: string, details: JSON, orderId: int?): void
+        -details: JSON  %% Detalhes adicionais em formato JSON
     }
 
     class Cart {
-        -id: string (session/cookie ou id do cliente)
-        -clientId: int
-        -createdAt: DateTime
-        -updatedAt: DateTime
-        -total: float
+        -id: string %% ID do carrinho
+        -clientId: int (session/cookie ou id do cliente)
         -coupon: Coupon?
         -items: CartItem[]
 
         +addItem(product: Product, quantity: int): void
         +removeItem(productId: int): void
-        +updateQuantity(productId: int, quantity: int): void
         +clear(): void
         +getTotal(): float
         +checkAllItemsStock(): bool
@@ -139,10 +132,17 @@ classDiagram
         -expirationDate: DateTime?
         -minCartValue: float?
         -isActive: bool
+
+        +isExpired: bool
     }
 
     class Address {
         -id: int
+        -street: string
+        -number: int
+        -complement: string
+        -state: string
+        -country: string
         -city: string
         -zipCode: string
     }
