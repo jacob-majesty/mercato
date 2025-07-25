@@ -1,0 +1,28 @@
+<?php
+
+// Define o título da página
+$title = 'Erro Interno do Servidor - Mercato';
+
+// Inicia o buffer de saída para capturar o HTML desta view
+ob_start();
+?>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 text-center">
+        <div class="card shadow-sm p-4">
+            <h1 class="display-1 text-danger"><i class="fas fa-exclamation-circle"></i> 500</h1>
+            <h2 class="mb-3">Erro Interno do Servidor</h2>
+            <p class="lead">Ocorreu um problema inesperado no servidor.</p>
+            <p class="mb-4"><?= htmlspecialchars($message ?? 'Nossa equipe foi notificada e está trabalhando para resolver isso. Por favor, tente novamente mais tarde.') ?></p>
+            <a href="/" class="btn btn-primary btn-lg"><i class="fas fa-home"></i> Voltar para a Página Inicial</a>
+        </div>
+    </div>
+</div>
+
+<?php
+// Obtém o conteúdo do buffer e o passa para a variável $content
+$content = ob_get_clean();
+
+// Inclui o layout principal
+require __DIR__ . '/../layout/main.php';
+?>
