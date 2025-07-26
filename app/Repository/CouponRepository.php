@@ -6,6 +6,7 @@ use App\Model\Coupon;
 use PDO;
 use DateTime;
 use Exception;
+use App\Interfaces\CouponRepositoryInterface;
 
 class CouponRepository implements CouponRepositoryInterface
 {

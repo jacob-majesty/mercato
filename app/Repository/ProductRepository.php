@@ -2,10 +2,18 @@
 
 namespace App\Repository;
 
-use App\Model\Product;
 use PDO;
+use App\Model\Product;
+use App\Interfaces\ProductRepositoryInterface; // Importa a interface
 use DateTime;
+use Exception;
 
+/**
+ * Class ProductRepository
+ * @package App\Repository
+ *
+ * Implementação concreta de ProductRepositoryInterface para MySQL.
+ */
 class ProductRepository implements ProductRepositoryInterface
 {
     private PDO $pdo;
@@ -15,146 +23,112 @@ class ProductRepository implements ProductRepositoryInterface
         $this->pdo = $pdo;
     }
 
-    private function mapProduct(array $data): Product
-    {
-        return new Product(
-            $data['id_produto'],
-            $data['nome'],
-            (float)$data['preco'],
-            $data['categoria'],
-            $data['descricao'],
-            $data['url_imagem'],
-            (int)$data['estoque'],
-            (int)$data['id_vendedor'],
-            (int)$data['reservado'] ?? 0,
-            isset($data['reservado_em']) ? new DateTime($data['reservado_em']) : null
-        );
-    }
-
     public function findById(int $id): ?Product
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM produtos WHERE id_produto = :id");
-        $stmt->execute([':id' => $id]);
+        $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = :id");
+        $stmt->execute(['id' => $id]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $data ? $this->mapProduct($data) : null;
+
+        if (!$data) {
+            return null;
+        }
+
+        return $this->mapToProduct($data);
     }
 
     public function findAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM produtos");
+        $stmt = $this->pdo->query("SELECT * FROM products");
         $products = [];
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $data) {
-            $products[] = $this->mapProduct($data);
+        while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $products[] = $this->mapToProduct($data);
+        }
+        return $products;
+    }
+
+    public function findPaginated(int $limit, int $offset): array
+    {
+        // Garante que a query seleciona todas as colunas necessárias para o modelo Product
+        $stmt = $this->pdo->prepare("SELECT id, name, description, price, stock, image_url, category, seller_id, created_at, updated_at FROM products LIMIT :limit OFFSET :offset");
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $products = [];
+        while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $products[] = $this->mapToProduct($data);
+        }
+        return $products;
+    }
+
+    public function countAll(): int
+    {
+        $stmt = $this->pdo->query("SELECT COUNT(*) FROM products");
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function getProductsBySellerId(int $sellerId): array
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM products WHERE seller_id = :seller_id");
+        $stmt->execute(['seller_id' => $sellerId]);
+        $products = [];
+        while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $products[] = $this->mapToProduct($data);
         }
         return $products;
     }
 
     public function save(Product $product): Product
     {
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO produtos (nome, preco, categoria, descricao, url_imagem, estoque, id_vendedor, reservado, reservado_em)
-             VALUES (:nome, :preco, :categoria, :descricao, :url_imagem, :estoque, :id_vendedor, :reservado, :reservado_em)"
-        );
+        $sql = "INSERT INTO products (name, description, price, stock, image_url, category, seller_id, created_at) VALUES (:name, :description, :price, :stock, :image_url, :category, :seller_id, :created_at)";
+        $stmt = $this->pdo->prepare($sql);
+
         $stmt->execute([
-            ':nome' => $product->getName(),
-            ':preco' => $product->getPrice(),
-            ':categoria' => $product->getCategory(),
-            ':descricao' => $product->getDescription(),
-            ':url_imagem' => $product->getImageUrl(),
-            ':estoque' => $product->getStock(),
-            ':id_vendedor' => $product->getSellerId(),
-            ':reservado' => $product->getReserved(),
-            ':reservado_em' => $product->getReservedAt() ? $product->getReservedAt()->format('Y-m-d H:i:s') : null,
+            'name' => $product->getName(),
+            'description' => $product->getDescription(),
+            'price' => $product->getPrice(),
+            'stock' => $product->getStock(),
+            'image_url' => $product->getImageUrl(),
+            'category' => $product->getCategory(),
+            'seller_id' => $product->getSellerId(),
+            'created_at' => $product->getCreatedAt() ? $product->getCreatedAt()->format('Y-m-d H:i:s') : (new DateTime())->format('Y-m-d H:i:s')
         ]);
-        // Para uma implementação completa, o Product Model precisaria de um setId()
-        // Ou o save deveria retornar um novo objeto Product com o ID populado.
-        // Para simplificar, vou simular o retorno do ID ou buscar o item.
-        $reflection = new \ReflectionProperty($product, 'id');
-        $reflection->setAccessible(true);
-        $reflection->setValue($product, (int)$this->pdo->lastInsertId());
+
+        $product->setId((int)$this->pdo->lastInsertId());
         return $product;
     }
 
     public function update(Product $product): bool
     {
-        $stmt = $this->pdo->prepare(
-            "UPDATE produtos SET nome = :nome, preco = :preco, categoria = :categoria,
-             descricao = :descricao, url_imagem = :url_imagem, estoque = :estoque,
-             reservado = :reserved, reservado_em = :reserved_at WHERE id_produto = :id"
-        );
+        $sql = "UPDATE products SET name = :name, description = :description, price = :price, stock = :stock, image_url = :image_url, category = :category, seller_id = :seller_id, updated_at = :updated_at WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+
         return $stmt->execute([
-            ':nome' => $product->getName(),
-            ':preco' => $product->getPrice(),
-            ':categoria' => $product->getCategory(),
-            ':descricao' => $product->getDescription(),
-            ':url_imagem' => $product->getImageUrl(),
-            ':estoque' => $product->getStock(),
-            ':reserved' => $product->getReserved(),
-            ':reserved_at' => $product->getReservedAt() ? $product->getReservedAt()->format('Y-m-d H:i:s') : null,
-            ':id' => $product->getId()
+            'id' => $product->getId(),
+            'name' => $product->getName(),
+            'description' => $product->getDescription(),
+            'price' => $product->getPrice(),
+            'stock' => $product->getStock(),
+            'image_url' => $product->getImageUrl(),
+            'category' => $product->getCategory(),
+            'seller_id' => $product->getSellerId(),
+            'updated_at' => (new DateTime())->format('Y-m-d H:i:s') // Atualiza o timestamp
         ]);
     }
 
     public function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM produtos WHERE id_produto = :id");
-        return $stmt->execute([':id' => $id]);
+        $stmt = $this->pdo->prepare("DELETE FROM products WHERE id = :id");
+        return $stmt->execute(['id' => $id]);
     }
 
-    public function findBySellerId(int $sellerId): array
-    {
-        $stmt = $this->pdo->prepare("SELECT * FROM produtos WHERE id_vendedor = :sellerId");
-        $stmt->execute([':sellerId' => $sellerId]);
-        $products = [];
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $data) {
-            $products[] = $this->mapProduct($data);
-        }
-        return $products;
-    }
-
-     /**
-     * Busca produtos por um ID de vendedor específico.
-     * @param int $sellerId O ID do vendedor.
-     * @return Product[] Uma array de objetos Product.
-     */
-    public function getProductsBySellerId(int $sellerId): array
-    {
-        $sql = "SELECT id, name, description, price, category, image_url, stock, reserved_stock, seller_id, created_at FROM products WHERE seller_id = :sellerId ORDER BY name ASC";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':sellerId', $sellerId, PDO::PARAM_INT);
-        $stmt->execute();
-        $productsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $products = [];
-        foreach ($productsData as $productData) {
-            $products[] = $this->hydrateProduct($productData);
-        }
-        return $products;
-    }
-
-     /**
-     * Cria um objeto Product a partir dos dados do banco de dados.
-     * @param array $data Dados do produto.
-     * @return Product
-     */
-    private function hydrateProduct(array $data): Product
-    {
-        return new Product(
-            $data['id'],
-            $data['name'],
-            $data['description'],
-            (float)$data['price'],
-            $data['category'],
-            (int)$data['stock'],
-            (int)$data['reserved_stock'],
-            $data['seller_id'],
-            $data['image_url'],
-            new DateTime($data['created_at'])
-        );
-    }
-
-     /**
-     * @inheritDoc
+    /**
+     * Busca produtos com base em critérios de filtro.
+     * @param string|null $searchTerm Termo para buscar no nome ou descrição.
+     * @param string|null $category Categoria do produto.
+     * @param float|null $minPrice Preço mínimo (inclusive).
+     * @param float|null $maxPrice Preço máximo (inclusive).
+     * @return Product[] Um array de objetos Product que correspondem aos critérios.
      */
     public function searchProducts(
         ?string $searchTerm = null,
@@ -162,26 +136,26 @@ class ProductRepository implements ProductRepositoryInterface
         ?float $minPrice = null,
         ?float $maxPrice = null
     ): array {
-        $sql = "SELECT * FROM products WHERE 1=1";
+        $sql = "SELECT * FROM products WHERE 1=1"; // Começa com uma condição verdadeira
 
         $params = [];
 
-        if ($searchTerm !== null && $searchTerm !== '') {
+        if ($searchTerm) {
             $sql .= " AND (name LIKE :searchTerm OR description LIKE :searchTerm)";
             $params[':searchTerm'] = '%' . $searchTerm . '%';
         }
 
-        if ($category !== null && $category !== '') {
+        if ($category) {
             $sql .= " AND category = :category";
             $params[':category'] = $category;
         }
 
-        if ($minPrice !== null && $minPrice >= 0) {
+        if ($minPrice !== null) {
             $sql .= " AND price >= :minPrice";
             $params[':minPrice'] = $minPrice;
         }
 
-        if ($maxPrice !== null && $maxPrice >= 0 && ($minPrice === null || $maxPrice >= $minPrice)) {
+        if ($maxPrice !== null) {
             $sql .= " AND price <= :maxPrice";
             $params[':maxPrice'] = $maxPrice;
         }
@@ -190,53 +164,31 @@ class ProductRepository implements ProductRepositoryInterface
         $stmt->execute($params);
 
         $products = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $products[] = new Product(
-                $row['id'],
-                $row['name'],
-                $row['price'],
-                $row['category'],
-                $row['description'],
-                $row['imageUrl'],
-                $row['stock'],
-                $row['sellerId'],
-                $row['reserved'],
-                $row['reservedAt'] ? new DateTime($row['reservedAt']) : null
-            );
-        }
-
-        return $products;
-    }
-
-     /**
-     * Implementação da busca paginada.
-     * @param int $limit
-     * @param int $offset
-     * @return Product[]
-     */
-    public function findPaginated(int $limit, int $offset): array
-    {
-        // Certifique-se de que a ordem (ORDER BY) é consistente para paginação
-        $sql = "SELECT * FROM products ORDER BY id ASC LIMIT :limit OFFSET :offset";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-
-        $products = [];
         while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $products[] = $this->hydrateProduct($data);
+            $products[] = $this->mapToProduct($data);
         }
         return $products;
     }
 
     /**
-     * Implementação da contagem total de produtos.
-     * @return int
+     * Mapeia um array de dados do banco de dados para um objeto Product.
+     * @param array $data
+     * @return Product
      */
-    public function countAll(): int
+    private function mapToProduct(array $data): Product
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM products");
-        return (int) $stmt->fetchColumn();
+        // Cast explícito para float e int
+        return new Product(
+            (int)$data['id'],
+            $data['name'],
+            (float)$data['price'], // Convertido para float
+            $data['category'],
+            $data['description'],
+            $data['image_url'],
+            (int)$data['stock'], // Convertido para int
+            (int)$data['seller_id'],
+            new DateTime($data['created_at']),
+            new DateTime($data['updated_at'])
+        );
     }
 }

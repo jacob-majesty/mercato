@@ -7,6 +7,7 @@ use App\Model\CartItem;
 use PDO;
 use DateTime;
 use Exception;
+use App\Interfaces\CartRepositoryInterface;
 
 /**
  * Class CartRepository

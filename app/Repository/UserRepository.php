@@ -8,7 +8,7 @@ use App\Model\Seller;
 use App\Model\Client;
 use PDO; // Para interação com o banco de dados
 use DateTime; // Para manipular datas
-use App\Repository\UserRepositoryInterface; // Importa a interface
+use App\Interfaces\UserRepositoryInterface; // Importa a interface
 
 /**
  * Class UserRepository

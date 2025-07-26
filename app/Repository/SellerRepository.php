@@ -6,6 +6,7 @@ use App\Model\Seller;
 use PDO;
 use DateTime;
 use Exception;
+use App\Interfaces\SellerRepositoryInterface;
 
 /**
  * Class SellerRepository

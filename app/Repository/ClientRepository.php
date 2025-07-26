@@ -2,15 +2,18 @@
 
 namespace App\Repository;
 
-use App\Model\Client;
 use PDO;
-use DateTime; // Para lidar com as datas de criação
+use App\Model\Client; // Certifique-se de que o namespace está correto
+use App\Model\User; // Se Client estende User, pode ser necessário
+use App\Interfaces\ClientRepositoryInterface; // Importa a interface
+use DateTime;
+use Exception;
 
 /**
  * Class ClientRepository
  * @package App\Repository
  *
- * Implementação do ClientRepositoryInterface para persistência de dados de clientes no banco de dados.
+ * Implementação concreta de ClientRepositoryInterface para MySQL.
  */
 class ClientRepository implements ClientRepositoryInterface
 {
@@ -21,88 +24,102 @@ class ClientRepository implements ClientRepositoryInterface
         $this->pdo = $pdo;
     }
 
-    public function save(Client $client): Client
-    {
-        $sql = "INSERT INTO users (email, first_name, last_name, role, pswd, created_at) VALUES (:email, :firstName, :lastName, :role, :password, :createdAt)";
-        $stmt = $this->pdo->prepare($sql);
-
-        $role = 'client'; // Garante que a role seja 'client'
-
-        $stmt->bindValue(':email', $client->getEmail());
-        $stmt->bindValue(':firstName', $client->getFirstName());
-        $stmt->bindValue(':lastName', $client->getLastName());
-        $stmt->bindValue(':role', $role);
-        $stmt->bindValue(':password', $client->getPswd()); // Assumindo que a senha já está hashed no modelo
-        $stmt->bindValue(':createdAt', $client->getCreatedAt()->format('Y-m-d H:i:s'));
-
-        if ($stmt->execute()) {
-            $client->setId((int)$this->pdo->lastInsertId());
-            return $client;
-        }
-        throw new \Exception("Erro ao salvar cliente.");
-    }
-
     public function findById(int $id): ?Client
     {
-        $sql = "SELECT id, email, first_name, last_name, role, pswd, created_at FROM users WHERE id = :id AND role = 'client'";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
-        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE id = :id AND role = 'client'");
+        $stmt->execute(['id' => $id]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($userData) {
-            return new Client(
-                $userData['id'],
-                $userData['email'],
-                $userData['first_name'],
-                $userData['last_name'],
-                $userData['pswd'],
-                new DateTime($userData['created_at'])
-            );
+        if (!$data) {
+            return null;
         }
-        return null;
+
+        return $this->mapToClient($data);
     }
 
     public function findByEmail(string $email): ?Client
     {
-        $sql = "SELECT id, email, first_name, last_name, role, pswd, created_at FROM users WHERE email = :email AND role = 'client'";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':email', $email);
-        $stmt->execute();
-        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = :email AND role = 'client'");
+        $stmt->execute(['email' => $email]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($userData) {
-            return new Client(
-                $userData['id'],
-                $userData['email'],
-                $userData['first_name'],
-                $userData['last_name'],
-                $userData['pswd'],
-                new DateTime($userData['created_at'])
-            );
+        if (!$data) {
+            return null;
         }
-        return null;
+
+        return $this->mapToClient($data);
+    }
+
+    public function save(Client $client): Client
+    {
+        $sql = "INSERT INTO users (email, first_name, last_name, pswd, role, created_at, updated_at) VALUES (:email, :first_name, :last_name, :pswd, :role, :created_at, :updated_at)";
+        $stmt = $this->pdo->prepare($sql);
+
+        $stmt->execute([
+            'email' => $client->getEmail(),
+            'first_name' => $client->getFirstName(),
+            'last_name' => $client->getLastName(),
+            'pswd' => $client->getPswd(), // Assumindo que o password já está hashado
+            'role' => $client->getRole(),
+            'created_at' => $client->getCreatedAt() ? $client->getCreatedAt()->format('Y-m-d H:i:s') : (new DateTime())->format('Y-m-d H:i:s'),
+            'updated_at' => $client->getUpdatedAt() ? $client->getUpdatedAt()->format('Y-m-d H:i:s') : null
+        ]);
+
+        $client->setId((int)$this->pdo->lastInsertId());
+        return $client;
     }
 
     public function update(Client $client): bool
     {
-        $sql = "UPDATE users SET email = :email, first_name = :firstName, last_name = :lastName, pswd = :password WHERE id = :id AND role = 'client'";
+        $sql = "UPDATE users SET email = :email, first_name = :first_name, last_name = :last_name, pswd = :pswd, role = :role, updated_at = :updated_at WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
 
-        $stmt->bindValue(':email', $client->getEmail());
-        $stmt->bindValue(':firstName', $client->getFirstName());
-        $stmt->bindValue(':lastName', $client->getLastName());
-        $stmt->bindValue(':password', $client->getPswd()); // A senha deve ser hashed antes de ser setada no modelo
-        $stmt->bindValue(':id', $client->getId(), PDO::PARAM_INT);
-
-        return $stmt->execute();
+        return $stmt->execute([
+            'id' => $client->getId(),
+            'email' => $client->getEmail(),
+            'first_name' => $client->getFirstName(),
+            'last_name' => $client->getLastName(),
+            'pswd' => $client->getPswd(), // Usar getPswd()
+            'role' => $client->getRole(),
+            'updated_at' => (new DateTime())->format('Y-m-d H:i:s')
+        ]);
     }
 
     public function delete(int $id): bool
     {
-        $sql = "DELETE FROM users WHERE id = :id AND role = 'client'";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        return $stmt->execute();
+        $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = :id AND role = 'client'");
+        return $stmt->execute(['id' => $id]);
+    }
+
+    /**
+     * Mapeia um array de dados do banco de dados para um objeto Client.
+     * @param array $data
+     * @return Client
+     */
+    private function mapToClient(array $data): Client
+    {
+        // Assinatura do construtor de Client (que chama o de User):
+        // public function __construct(
+        //     string $email,
+        //     string $firstName,
+        //     string $lastName,
+        //     string $password, // Este é o pswd hashado
+        //     ?int $id = null,
+        //     ?string $role = 'client',
+        //     ?DateTime $createdAt = null,
+        //     ?DateTime $updatedAt = null
+        // )
+
+        // CORRIGIDO: Passando os argumentos na ordem correta para o construtor do Client
+        return new Client(
+            $data['email'],
+            $data['first_name'],
+            $data['last_name'],
+            $data['pswd'], // Argumento 4: senha (pswd)
+            isset($data['id']) ? (int)$data['id'] : null, // Argumento 5: id
+            $data['role'] ?? 'client', // Argumento 6: role
+            new DateTime($data['created_at']), // Argumento 7: createdAt
+            isset($data['updated_at']) ? new DateTime($data['updated_at']) : null // Argumento 8: updatedAt
+        );
     }
 }

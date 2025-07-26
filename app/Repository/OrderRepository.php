@@ -9,6 +9,8 @@ use PDO;
 use DateTime;
 use Exception;
 
+use App\Interfaces\OrderRepositoryInterface;
+
 /**
  * Class OrderRepository
  * @package App\Repository
