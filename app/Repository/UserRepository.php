@@ -2,22 +2,19 @@
 
 namespace App\Repository;
 
+use PDO;
 use App\Model\User;
-use App\Model\Admin;
-use App\Model\Seller;
-use App\Model\Client;
-use PDO; // Para interação com o banco de dados
-use DateTime; // Para manipular datas
-use App\Interfaces\UserRepositoryInterface; // Importa a interface
+use DateTime;
+use Exception;
+use App\Interfaces\UserRepositoryInterface;
 
 /**
  * Class UserRepository
  * @package App\Repository
  *
- * Responsável por todas as operações de persistência de dados
- * para a entidade User no banco de dados.
+ * Implementação concreta de UserRepositoryInterface para MySQL.
  */
-class UserRepository implements UserRepositoryInterface // Implementa a interface
+class UserRepository implements UserRepositoryInterface
 {
     private PDO $pdo;
 
@@ -26,142 +23,144 @@ class UserRepository implements UserRepositoryInterface // Implementa a interfac
         $this->pdo = $pdo;
     }
 
-    /**
-     * Converte um array de dados do DB em um objeto User (ou subclasse).
-     * @param array $userData Dados do usuário do banco de dados.
-     * @return User|null
-     */
-    private function mapUser(array $userData): ?User
+    public function findById(int $id): ?User
     {
-        if (empty($userData)) {
+        error_log("UserRepository: findById - Buscando usuário com ID: " . $id);
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE id = :id");
+        $stmt->execute(['id' => $id]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$data) {
+            error_log("UserRepository: findById - Usuário com ID {$id} não encontrado no DB.");
             return null;
         }
 
-        $id = $userData['id_usuario'];
-        $email = $userData['email'];
-        $firstName = $userData['primeiro_nome'];
-        $lastName = $userData['ultimo_nome'];
-        $role = $userData['papel'];
-        $pswd = $userData['senha'];
-        // Garante que 'criado_em' exista antes de tentar usar, ou defina um valor padrão
-        $createdAt = isset($userData['criado_em']) ? new DateTime($userData['criado_em']) : new DateTime();
-
-        switch ($role) {
-            case 'admin':
-                return new Admin($email, $firstName, $lastName, $pswd, $id, $createdAt);
-            case 'seller':
-                return new Seller($email, $firstName, $lastName, $pswd, $id, $createdAt);
-            case 'client':
-                return new Client($email, $firstName, $lastName, $pswd, $id, $createdAt);
-            default:
-                // Lidar com um papel desconhecido, talvez lançar uma exceção ou retornar User base
-                return new User($email, $firstName, $lastName, $role, $pswd, $id, $createdAt);
-        }
+        error_log("UserRepository: findById - Dados brutos do DB para ID {$id}: " . json_encode($data));
+        return $this->mapToUser($data);
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function findById(int $id): ?User
-    {
-        $stmt = $this->pdo->prepare("SELECT * FROM usuarios WHERE id_usuario = :id");
-        $stmt->execute([':id' => $id]);
-        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $this->mapUser($userData);
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function findByEmail(string $email): ?User
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM usuarios WHERE email = :email");
-        $stmt->execute([':email' => $email]);
-        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $this->mapUser($userData);
-    }
+        error_log("UserRepository: findByEmail - Buscando usuário com email: " . $email);
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = :email");
+        $stmt->execute(['email' => $email]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    /**
-     * @inheritDoc
-     */
-    public function save(User $user): User
-    {
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO usuarios (email, primeiro_nome, ultimo_nome, papel, senha, criado_em)
-             VALUES (:email, :firstName, :lastName, :role, :pswd, :createdAt)"
-        );
-        $result = $stmt->execute([
-            ':email' => $user->getEmail(),
-            ':firstName' => $user->getFirstName(),
-            ':lastName' => $user->getLastName(),
-            ':role' => $user->getRole(),
-            ':pswd' => $user->getPswd(),
-            ':createdAt' => $user->getCreatedAt()->format('Y-m-d H:i:s')
-        ]);
-
-        if ($result) {
-            // O ideal é que o Model User tenha um setter para o ID
-            // ou que o construtor aceite o ID como opcional
-            // Para User: public function __construct($email, $firstName, $lastName, $role, $pswd, $id = null, $createdAt = null)
-            // Para as subclasses: public function __construct($email, $firstName, $lastName, $pswd, $id = null, $createdAt = null)
-            // Se o ID for null no construtor do model, o método setId() será necessário para popula-lo
-            // Ou o UserRepository deve retornar uma nova instância do User com o ID.
-            // Para o exemplo, vamos assumir que o ID é 'setado' internamente ou que uma nova instância é criada.
-            $newId = (int)$this->pdo->lastInsertId();
-            // A forma mais limpa é o Model ter um setId protegido e o Repository acessá-lo via Reflection
-            // ou o Model ter um método "hydrateId"
-            // Por simplicidade, vou criar uma nova instância aqui (menos eficiente mas funciona)
-            return $this->findById($newId); // Busca o usuário recém-criado com o ID
+        if (!$data) {
+            error_log("UserRepository: findByEmail - Usuário com email {$email} NÃO ENCONTRADO no DB.");
+            return null;
         }
 
-        throw new \PDOException("Erro ao salvar o usuário no banco de dados.");
+        error_log("UserRepository: findByEmail - Dados brutos do DB para email {$email}: " . json_encode($data));
+        return $this->mapToUser($data);
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function update(User $user): bool
-    {
-        if ($user->getId() === null) {
-            throw new \InvalidArgumentException("Não é possível atualizar um usuário sem ID.");
-        }
-
-        $stmt = $this->pdo->prepare(
-            "UPDATE usuarios SET email = :email, primeiro_nome = :firstName,
-             ultimo_nome = :lastName, senha = :pswd WHERE id_usuario = :id"
-        );
-        return $stmt->execute([
-            ':email' => $user->getEmail(),
-            ':firstName' => $user->getFirstName(),
-            ':lastName' => $user->getLastName(),
-            ':pswd' => $user->getPswd(),
-            ':id' => $user->getId()
-        ]);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function delete(int $id): bool
-    {
-        $stmt = $this->pdo->prepare("DELETE FROM usuarios WHERE id_usuario = :id");
-        return $stmt->execute([':id' => $id]);
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function findAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM usuarios");
-        $usersData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $this->pdo->query("SELECT * FROM users");
         $users = [];
-        foreach ($usersData as $userData) {
-            $user = $this->mapUser($userData);
-            if ($user) {
-                $users[] = $user;
-            }
+        while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $users[] = $this->mapToUser($data);
         }
         return $users;
+    }
+
+    public function save(User $user): User
+    {
+        $sql = "INSERT INTO users (email, first_name, last_name, pswd, role, created_at, updated_at) VALUES (:email, :first_name, :last_name, :pswd, :role, :created_at, :updated_at)";
+        $stmt = $this->pdo->prepare($sql);
+
+        try {
+            $stmt->execute([
+                'email' => $user->getEmail(),
+                'first_name' => $user->getFirstName(),
+                'last_name' => $user->getLastName(),
+                'pswd' => $user->getPswd(),
+                'role' => $user->getRole(),
+                'created_at' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : (new DateTime())->format('Y-m-d H:i:s'),
+                'updated_at' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null
+            ]);
+        } catch (Exception $e) {
+            error_log("UserRepository: Erro ao salvar usuário: " . $e->getMessage());
+            throw $e;
+        }
+
+        $user->setId((int)$this->pdo->lastInsertId());
+        return $user;
+    }
+
+    public function update(User $user): bool
+    {
+        $sql = "UPDATE users SET email = :email, first_name = :first_name, last_name = :last_name, pswd = :pswd, role = :role, updated_at = :updated_at WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+
+        try {
+            return $stmt->execute([
+                'id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'first_name' => $user->getFirstName(),
+                'last_name' => $user->getLastName(),
+                'pswd' => $user->getPswd(),
+                'role' => $user->getRole(),
+                'updated_at' => (new DateTime())->format('Y-m-d H:i:s')
+            ]);
+        } catch (Exception $e) {
+            error_log("UserRepository: Erro ao atualizar usuário: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function delete(int $id): bool
+    {
+        $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = :id");
+        try {
+            return $stmt->execute(['id' => $id]);
+        } catch (Exception $e) {
+            error_log("UserRepository: Erro ao deletar usuário: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Mapeia um array de dados do banco de dados para um objeto User.
+     * @param array $data
+     * @return User
+     */
+    private function mapToUser(array $data): User
+    {
+        error_log("UserRepository: mapToUser - Dados recebidos para mapeamento: " . json_encode($data));
+
+        // Verificação e cast explícito de cada argumento
+        $id = isset($data['id']) ? (int)$data['id'] : null;
+        $email = $data['email'];
+        $firstName = $data['first_name'];
+        $lastName = $data['last_name'];
+        $pswd = $data['pswd'];
+        $role = $data['role'];
+        $createdAt = isset($data['created_at']) ? new DateTime($data['created_at']) : null;
+        $updatedAt = isset($data['updated_at']) ? new DateTime($data['updated_at']) : null;
+
+        error_log("UserRepository: mapToUser - Tipos de dados após cast/verificação:");
+        error_log("  id: " . gettype($id) . " - " . ($id ?? 'NULL'));
+        error_log("  email: " . gettype($email) . " - " . $email);
+        error_log("  firstName: " . gettype($firstName) . " - " . $firstName);
+        error_log("  lastName: " . gettype($lastName) . " - " . $lastName);
+        error_log("  pswd: " . gettype($pswd) . " - " . (is_string($pswd) ? substr($pswd, 0, 10) . '...' : ''));
+        error_log("  role: " . gettype($role) . " - " . $role);
+        error_log("  createdAt: " . gettype($createdAt) . " - " . ($createdAt ? $createdAt->format('Y-m-d H:i:s') : 'NULL'));
+        error_log("  updatedAt: " . gettype($updatedAt) . " - " . ($updatedAt ? $updatedAt->format('Y-m-d H:i:s') : 'NULL'));
+
+        // Assinatura do construtor de User:
+        // public function __construct(string $email, string $firstName, string $lastName, string $pswd, string $role, ?int $id = null, ?DateTime $createdAt = null, ?DateTime $updatedAt = null)
+        return new User(
+            $email,
+            $firstName,
+            $lastName,
+            $pswd,
+            $role,
+            $id,
+            $createdAt,
+            $updatedAt
+        );
     }
 }
