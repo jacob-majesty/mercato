@@ -33,11 +33,19 @@ class Client extends User
         string $email,
         string $firstName,
         string $lastName,
-        string $pswd,
-        ?int $id = null,
-        ?DateTime $createdAt = null
+        string $password,
+        ?int $id = null, // CORRIGIDO: Argumento #5 ($id) é ?int
+        ?string $role = 'client', // Role padrão para Cliente
+        ?DateTime $createdAt = null,
+        ?DateTime $updatedAt = null
     ) {
-        parent::__construct($email, $firstName, $lastName, 'client', $pswd, $id, $createdAt);
+        parent::__construct($email, $firstName, $lastName, $password, $id, $role, $createdAt, $updatedAt);
+        // Garante que o papel seja 'client' para objetos Client
+        if ($this->role !== 'client') {
+            $this->role = 'client';
+            // Opcional: Logar um aviso ou lançar uma exceção se um papel diferente for passado
+            // error_log("Warning: Client created with non-client role. Forcing role to 'client'.");
+        }
     }
 
     /**

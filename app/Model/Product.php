@@ -3,12 +3,13 @@
 namespace App\Model;
 
 use DateTime;
+use InvalidArgumentException;
 
 /**
  * Class Product
  * @package App\Model
  *
- * Representa um produto ou ingresso disponível para venda.
+ * Representa um produto no sistema.
  */
 class Product
 {
@@ -16,38 +17,24 @@ class Product
     private string $name;
     private float $price;
     private string $category;
-    private string $description;
-    private string $imageUrl;
+    private ?string $description;
+    private ?string $imageUrl;
     private int $stock;
-    private int $sellerId; // ID do vendedor que publicou o produto
-    private ?int $reserved; // Quantidade reservada por clientes (último item)
-    private ?DateTime $reservedAt; // Timestamp da reserva do último item
+    private int $sellerId;
+    private ?DateTime $createdAt;
+    private ?DateTime $updatedAt;
 
-    /**
-     * Construtor da classe Product.
-     *
-     * @param int|null $id O ID do produto (nulo para novos produtos).
-     * @param string $name O nome do produto.
-     * @param float $price O preço do produto.
-     * @param string $category A categoria do produto.
-     * @param string $description A descrição do produto.
-     * @param string $imageUrl A URL da imagem do produto.
-     * @param int $stock A quantidade total em estoque.
-     * @param int $sellerId O ID do vendedor que publicou o produto.
-     * @param int $reserved Quantidade de itens reservados (padrão 0).
-     * @param DateTime|null $reservedAt Timestamp da reserva (nulo se não houver reserva).
-     */
     public function __construct(
         ?int $id,
         string $name,
-        float $price,
+        float $price, // Espera float
         string $category,
-        string $description,
-        string $imageUrl,
+        ?string $description,
+        ?string $imageUrl,
         int $stock,
         int $sellerId,
-        int $reserved = 0,
-        ?DateTime $reservedAt = null
+        ?DateTime $createdAt = null,
+        ?DateTime $updatedAt = null
     ) {
         $this->id = $id;
         $this->name = $name;
@@ -57,8 +44,8 @@ class Product
         $this->imageUrl = $imageUrl;
         $this->stock = $stock;
         $this->sellerId = $sellerId;
-        $this->reserved = $reserved;
-        $this->reservedAt = $reservedAt;
+        $this->createdAt = $createdAt;
+        $this->updatedAt = $updatedAt;
     }
 
     // Getters
@@ -82,12 +69,12 @@ class Product
         return $this->category;
     }
 
-    public function getDescription(): string
+    public function getDescription(): ?string
     {
         return $this->description;
     }
 
-    public function getImageUrl(): string
+    public function getImageUrl(): ?string
     {
         return $this->imageUrl;
     }
@@ -102,17 +89,22 @@ class Product
         return $this->sellerId;
     }
 
-    public function getReserved(): int
+    public function getCreatedAt(): ?DateTime
     {
-        return $this->reserved;
+        return $this->createdAt;
     }
 
-    public function getReservedAt(): ?DateTime
+    public function getUpdatedAt(): ?DateTime
     {
-        return $this->reservedAt;
+        return $this->updatedAt;
     }
 
-    // Setters (para atributos que podem ser alterados após a criação)
+    // Setters (para permitir atualização de propriedades)
+    public function setId(int $id): void
+    {
+        $this->id = $id;
+    }
+
     public function setName(string $name): void
     {
         $this->name = $name;
@@ -120,6 +112,9 @@ class Product
 
     public function setPrice(float $price): void
     {
+        if ($price < 0) {
+            throw new InvalidArgumentException("Preço não pode ser negativo.");
+        }
         $this->price = $price;
     }
 
@@ -128,80 +123,48 @@ class Product
         $this->category = $category;
     }
 
-    public function setDescription(string $description): void
+    public function setDescription(?string $description): void
     {
         $this->description = $description;
     }
 
-    public function setImageUrl(string $imageUrl): void
+    public function setImageUrl(?string $imageUrl): void
     {
         $this->imageUrl = $imageUrl;
     }
 
     public function setStock(int $stock): void
     {
+        if ($stock < 0) {
+            throw new InvalidArgumentException("Estoque não pode ser negativo.");
+        }
         $this->stock = $stock;
     }
 
+    public function setSellerId(int $sellerId): void
+    {
+        $this->sellerId = $sellerId;
+    }
+
+    public function setCreatedAt(DateTime $createdAt): void
+    {
+        $this->createdAt = $createdAt;
+    }
+
+    public function setUpdatedAt(DateTime $updatedAt): void
+    {
+        $this->updatedAt = $updatedAt;
+    }
+
     /**
-     * Verifica se há estoque disponível para uma determinada quantidade.
-     * Considera o estoque total menos a quantidade reservada.
-     *
-     * @param int $quantity A quantidade desejada.
-     * @return bool True se houver estoque suficiente, false caso contrário.
+     * Verifica se há estoque suficiente para uma dada quantidade.
+     * @param int $quantity
+     * @return bool
      */
     public function checkStock(int $quantity): bool
     {
-        // Regra: Só podem ser comprados se `quantidade - reservado > 0`.
-        return ($this->stock - $this->reserved) >= $quantity;
-    }
-
-    /**
-     * Reserva uma quantidade do produto.
-     * Regra: Se for o último item, ele é reservado por 2 minutos.
-     * Esta lógica pode ser orquestrada no Service (ex: CompraService)
-     * que chamaria este método do Model.
-     *
-     * @param int $quantity A quantidade a ser reservada.
-     * @return bool True se a reserva for bem-sucedida, false caso contrário (ex: estoque insuficiente).
-     */
-    public function reserve(int $quantity): bool
-    {
-        if ($this->checkStock($quantity)) {
-            // Lógica de reserva. Se for o último item (ou se a reserva vai zerar o estoque disponível),
-            // a lógica de tempo pode ser aplicada no Service.
-            // Aqui, apenas incrementamos a reserva.
-            $this->reserved += $quantity;
-            if (($this->stock - $this->reserved) === 0) {
-                $this->reservedAt = new DateTime(); // Marca a hora da reserva do último item
-            }
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Libera uma quantidade reservada do produto.
-     * @param int $quantity A quantidade a ser liberada.
-     * @return void
-     */
-    public function release(int $quantity): void
-    {
-        $this->reserved = max(0, $this->reserved - $quantity);
-        if ($this->reserved === 0) {
-            $this->reservedAt = null; // Remove o timestamp se não houver mais reservas
-        }
-    }
-
-    /**
-     * Decrementa o estoque do produto após uma compra.
-     * @param int $quantity A quantidade a ser decrementada.
-     * @return void
-     */
-    public function decrementStock(int $quantity): void
-    {
-        $this->stock -= $quantity;
-        // Após a decrementação, também se libera a reserva correspondente.
-        $this->release($quantity);
+        // Se você tiver um campo reserved_stock no futuro, ajuste aqui
+        // return ($this->stock - $this->reservedStock) >= $quantity;
+        return $this->stock >= $quantity;
     }
 }
