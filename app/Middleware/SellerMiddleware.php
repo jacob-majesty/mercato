@@ -4,17 +4,20 @@ namespace App\Middleware;
 
 use App\Core\Request;
 use App\Core\Authenticator;
-use App\Core\Response;
-use Exception;
+use App\Core\Response; // Import Response for redirection
 
 class SellerMiddleware implements MiddlewareInterface
 {
-    public function handle(Request $request): void
+    public function handle(Request $request): bool // Alterado o tipo de retorno para bool
     {
-        if (!Authenticator::isSeller()) {
-            // Se não for Seller, redireciona ou mostra erro 403 (Proibido)
-            Response::view('errors/403', ['message' => 'Acesso negado. Você não tem permissão para esta ação.'], 403)->send();
+        error_log("SellerMiddleware: Executando para URI '" . $request->getUri() . "'");
+
+        if (!Authenticator::check() || !Authenticator::isSeller()) {
+            error_log("SellerMiddleware: Acesso negado. Usuário não é vendedor ou não autenticado. Redirecionando para /login.");
+            Response::redirect('/login')->send(); // Ou para uma página de 403, dependendo da UX
             exit();
         }
+        error_log("SellerMiddleware: Usuário é vendedor e autenticado. Permissão concedida. Retornando true.");
+        return true; // Explicitamente retorna true quando o acesso é concedido
     }
 }

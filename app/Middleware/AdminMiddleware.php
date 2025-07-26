@@ -4,17 +4,20 @@ namespace App\Middleware;
 
 use App\Core\Request;
 use App\Core\Authenticator;
-use App\Core\Response;
-use Exception;
+use App\Core\Response; // Import Response for redirection
 
 class AdminMiddleware implements MiddlewareInterface
 {
-    public function handle(Request $request): void
+    public function handle(Request $request): bool // Alterado o tipo de retorno para bool
     {
-        if (!Authenticator::isAdmin()) {
-            // Se não for admin, redireciona ou mostra erro 403 (Proibido)
-            Response::view('errors/403', ['message' => 'Acesso negado. Você não tem permissão para esta ação.'], 403)->send();
+        error_log("AdminMiddleware: Executando para URI '" . $request->getUri() . "'");
+
+        if (!Authenticator::check() || !Authenticator::isAdmin()) {
+            error_log("AdminMiddleware: Acesso negado. Usuário não é admin ou não autenticado. Redirecionando para /login.");
+            Response::redirect('/login')->send(); // Ou para uma página de 403, dependendo da UX
             exit();
         }
+        error_log("AdminMiddleware: Usuário é admin e autenticado. Permissão concedida. Retornando true.");
+        return true; // Explicitamente retorna true quando o acesso é concedido
     }
 }

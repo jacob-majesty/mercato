@@ -9,12 +9,15 @@ use Exception;
 
 class ClientMiddleware implements MiddlewareInterface
 {
-    public function handle(Request $request): void
+    public function handle(Request $request): bool // O tipo de retorno deve ser 'bool'
     {
         if (!Authenticator::isClient()) {
             // Se não for Client, redireciona ou mostra erro 403 (Proibido)
             Response::view('errors/403', ['message' => 'Acesso negado. Você não tem permissão para esta ação.'], 403)->send();
-            exit();
+            exit(); // Encerra a execução aqui, então não há necessidade de retornar true/false
         }
+        // Se o código chegar aqui, significa que o usuário é um cliente,
+        // então o acesso é permitido. Retorne true explicitamente.
+        return true;
     }
 }

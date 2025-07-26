@@ -4,18 +4,20 @@ namespace App\Middleware;
 
 use App\Core\Request;
 use App\Core\Authenticator;
-use App\Core\Response; // Para redirecionamento
-use Exception;
+use App\Core\Response; // Import Response for redirection
 
 class AuthMiddleware implements MiddlewareInterface
 {
-    public function handle(Request $request): void
+    public function handle(Request $request): bool // Alterado o tipo de retorno para bool
     {
+        error_log("AuthMiddleware: Executando para URI '" . $request->getUri() . "'");
+
         if (!Authenticator::check()) {
-            // Se não estiver autenticado, redireciona para a página de login
-            // E encerra a execução para que o controlador não seja chamado.
+            error_log("AuthMiddleware: Usuário não autenticado. Redirecionando para /login.");
             Response::redirect('/login')->send();
-            exit(); // Importante para parar a execução
+            exit();
         }
+        error_log("AuthMiddleware: Usuário autenticado. Permissão concedida. Retornando true.");
+        return true; // Explicitamente retorna true quando o acesso é concedido
     }
 }
