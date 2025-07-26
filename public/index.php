@@ -117,48 +117,48 @@ $router->middleware('guest', GuestMiddleware::class);
 function defineWebRoutes(Router $router): void
 {
     // Rotas públicas (não exigem login)
-    $router->get('', [HomeController::class, 'index']); // CORRIGIDO: Passa a classe, não a instância
-    $router->get('products', [ProductController::class, 'index']); // CORRIGIDO
-    $router->get('products/{id}', [ProductController::class, 'show']); // CORRIGIDO
+    $router->get('', [HomeController::class, 'index']);
+    $router->get('products', [ProductController::class, 'index']);
+    $router->get('products/{id}', [ProductController::class, 'show']);
 
     // Rotas de Autenticação
-    $router->get('login', [AuthController::class, 'showLoginForm'], ['guest']); // CORRIGIDO
-    $router->post('login', [AuthController::class, 'login']); // CORRIGIDO
-    $router->get('register', [AuthController::class, 'showRegisterForm'], ['guest']); // CORRIGIDO
-    $router->post('register', [AuthController::class, 'register']); // CORRIGIDO
-    $router->get('logout', [AuthController::class, 'logout'], ['auth']); // CORRIGIDO
+    $router->get('login', [AuthController::class, 'showLoginForm'], ['guest']);
+    $router->post('login', [AuthController::class, 'login']);
+    $router->get('register', [AuthController::class, 'showRegisterForm'], ['guest']);
+    $router->post('register', [AuthController::class, 'register']);
+    $router->get('logout', [AuthController::class, 'logout'], ['auth']);
 
     // Rotas protegidas para Clientes (exigem login e role 'client')
-    $router->get('cart', [ClientController::class, 'viewCart'], ['auth', 'client']); // CORRIGIDO
-    $router->post('cart/add', [ClientController::class, 'addToCart'], ['auth', 'client']); // CORRIGIDO
-    $router->post('cart/remove', [ClientController::class, 'removeFromCart'], ['auth', 'client']); // CORRIGIDO
-    $router->post('cart/update-quantity', [ClientController::class, 'updateItemQuantity'], ['auth', 'client']); // CORRIGIDO
-    $router->get('checkout', [ClientController::class, 'showCheckout'], ['auth', 'client']); // CORRIGIDO
-    $router->post('checkout', [ClientController::class, 'processCheckout'], ['auth', 'client']); // CORRIGIDO
-    $router->get('orders', [ClientController::class, 'viewOrders'], ['auth', 'client']); // CORRIGIDO
-    $router->get('orders/{id}/receipt', [ClientController::class, 'generateReceipt'], ['auth', 'client']); // CORRIGIDO
+    $router->get('cart', [ClientController::class, 'viewCart'], ['auth', 'client']);
+    $router->post('cart/add', [ClientController::class, 'addToCart'], ['auth', 'client']);
+    $router->post('cart/remove', [ClientController::class, 'removeFromCart'], ['auth', 'client']);
+    $router->post('cart/update-quantity', [ClientController::class, 'updateItemQuantity'], ['auth', 'client']);
+    $router->get('checkout', [ClientController::class, 'showCheckout'], ['auth', 'client']);
+    $router->post('checkout', [ClientController::class, 'processCheckout'], ['auth', 'client']);
+    $router->get('orders', [ClientController::class, 'viewOrders'], ['auth', 'client']);
+    $router->get('orders/{id}/receipt', [ClientController::class, 'generateReceipt'], ['auth', 'client']);
 
 
     // Rotas protegidas para Vendedores (exigem login e role 'seller')
-    $router->get('seller/dashboard', [SellerController::class, 'dashboard'], ['auth', 'seller']); // CORRIGIDO
-    $router->get('seller/products', [SellerController::class, 'listProducts'], ['auth', 'seller']); // CORRIGIDO
-    $router->get('seller/products/create', [SellerController::class, 'createProductForm'], ['auth', 'seller']); // CORRIGIDO
-    $router->post('seller/products', [SellerController::class, 'storeProduct'], ['auth', 'seller']); // CORRIGIDO
-    $router->get('seller/products/{id}/edit', [SellerController::class, 'editProductForm'], ['auth', 'seller']); // CORRIGIDO
-    $router->post('seller/products/{id}', [SellerController::class, 'updateProduct'], ['auth', 'seller']); // CORRIGIDO
-    $router->post('seller/products/{id}/delete', [SellerController::class, 'deleteProduct'], ['auth', 'seller']); // CORRIGIDO
-    $router->post('seller/products/{id}/discount', [SellerController::class, 'applyDiscount'], ['auth', 'seller']); // CORRIGIDO
+    $router->get('seller/dashboard', [SellerController::class, 'dashboard'], ['auth', 'seller']);
+    $router->get('seller/products', [SellerController::class, 'listProducts'], ['auth', 'seller']);
+    $router->get('seller/products/create', [SellerController::class, 'createProductForm'], ['auth', 'seller']);
+    $router->post('seller/products', [SellerController::class, 'storeProduct'], ['auth', 'seller']);
+    $router->get('seller/products/{id}/edit', [SellerController::class, 'editProductForm'], ['auth', 'seller']);
+    $router->post('seller/products/{id}', [SellerController::class, 'updateProduct'], ['auth', 'seller']);
+    $router->post('seller/products/{id}/delete', [SellerController::class, 'deleteProduct'], ['auth', 'seller']);
+    $router->post('seller/products/{id}/discount', [SellerController::class, 'applyDiscount'], ['auth', 'seller']);
 
     // Rotas protegidas para Administradores (exigem login e role 'admin')
-    $router->get('admin/dashboard', [AdminController::class, 'dashboard'], ['auth', 'admin']); // CORRIGIDO
-    $router->get('admin/users', [AdminController::class, 'listUsers'], ['auth', 'admin']); // CORRIGIDO
-    $router->get('admin/users/{id}', [AdminController::class, 'showUser'], ['auth', 'admin']); // CORRIGIDO
-    $router->post('admin/users/{id}', [AdminController::class, 'updateUser'], ['auth', 'admin']); // CORRIGIDO
-    $router->post('admin/users/{id}/delete', [AdminController::class, 'deleteUser'], ['auth', 'admin']); // CORRIGIDO
-    $router->get('admin/products', [AdminController::class, 'listAllProducts'], ['auth', 'admin']); // CORRIGIDO
-    $router->get('admin/orders', [AdminController::class, 'manageOrders'], ['auth', 'admin']); // CORRIGIDO
-    $router->post('admin/orders/{id}/status', [AdminController::class, 'updateOrderStatus'], ['auth', 'admin']); // CORRIGIDO
-    $router->get('admin/logs', [AdminController::class, 'viewLogs'], ['auth', 'admin']); // CORRIGIDO
+    $router->get('admin/dashboard', [AdminController::class, 'dashboard'], ['auth', 'admin']);
+    $router->get('admin/users', [AdminController::class, 'listUsers'], ['auth', 'admin']);
+    $router->get('admin/users/{id}', [AdminController::class, 'showUser'], ['auth', 'admin']);
+    $router->post('admin/users/{id}', [AdminController::class, 'updateUser'], ['auth', 'admin']);
+    $router->post('admin/users/{id}/delete', [AdminController::class, 'deleteUser'], ['auth', 'admin']);
+    $router->get('admin/products', [AdminController::class, 'listAllProducts'], ['auth', 'admin']);
+    $router->get('admin/orders', [AdminController::class, 'manageOrders'], ['auth', 'admin']);
+    $router->post('admin/orders/{id}/status', [AdminController::class, 'updateOrderStatus'], ['auth', 'admin']);
+    $router->get('admin/logs', [AdminController::class, 'viewLogs'], ['auth', 'admin']);
 } // Fim da função defineWebRoutes
 
 // Chame a função para definir as rotas. As dependências são injetadas pelo Router.
@@ -172,9 +172,10 @@ $request = new Request();
 try {
     $response = $router->dispatch($request);
     $response->send();
-} catch (Exception $e) {
+} catch (\Throwable $e) { // Captura Throwable para pegar Errors e Exceptions
     // Tratamento de erros centralizado
     error_log("Erro de aplicação: " . $e->getMessage() . " na linha " . $e->getLine() . " do arquivo " . $e->getFile());
+    error_log("Stack trace: " . $e->getTraceAsString()); // Adiciona o stack trace completo
 
     // Define o código de status HTTP com base na exceção, se disponível
     $statusCode = $e->getCode() ?: 500;
