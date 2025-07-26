@@ -2,10 +2,10 @@
 
 namespace App\Service;
 
-use App\Repository\UserRepositoryInterface;
-use App\Repository\ProductRepositoryInterface;
-use App\Repository\OrderRepositoryInterface;
-use App\Repository\LogRepositoryInterface;
+use App\Interfaces\UserRepositoryInterface;
+use App\Interfaces\ProductRepositoryInterface;
+use App\Interfaces\OrderRepositoryInterface;
+use App\Interfaces\LogRepositoryInterface;
 use App\DTO\UserDTO; 
 use App\DTO\ProductUpdateDTO;
 use App\DTO\ProductCreateDTO;

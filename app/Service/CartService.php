@@ -6,7 +6,7 @@ use App\Model\Cart;
 use App\Model\CartItem;
 use App\DTO\CartAddItemDTO;
 use App\DTO\OrderCreateDTO;
-use App\Repository\CartRepositoryInterface;
+use App\Interfaces\CartRepositoryInterface;
 use App\Service\ProductService; // Para verificar estoque e obter dados do produto
 use App\Service\OrderService;   // Para finalizar a compra
 use App\Service\LogService;     // Para registrar ações do carrinho

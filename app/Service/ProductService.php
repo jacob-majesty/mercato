@@ -2,7 +2,7 @@
 
 namespace App\Service;
 
-use App\Repository\ProductRepositoryInterface;
+use App\Interfaces\ProductRepositoryInterface;
 use App\Model\Product;
 use App\DTO\ProductCreateDTO;
 use App\DTO\ProductUpdateDTO;
@@ -354,6 +354,16 @@ class ProductService
             'totalItems' => $totalItems,
             'totalPages' => (int) $totalPages // Garante que seja um inteiro
         ];
+    }
+
+      /**
+     * Obtém TODOS os produtos cadastrados no sistema (para uso administrativo).
+     * Este método não filtra por disponibilidade de estoque.
+     * @return Product[]
+     */
+    public function getAllProducts(): array
+    {
+        return $this->productRepository->findAll();
     }
 
 }

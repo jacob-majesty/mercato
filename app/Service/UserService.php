@@ -6,8 +6,11 @@ use App\Model\User;
 use App\Model\Admin;
 use App\Model\Seller;
 use App\Model\Client;
-use App\Repository\UserRepositoryInterface; // Usar a interface
-use App\DTO\UserDTO; // Importar o DTO
+use App\Interfaces\UserRepositoryInterface; 
+use App\Service\LogService;
+use App\DTO\UserUpdateDTO;
+use App\DTO\UserDTO; 
+
 use Exception;
 
 /**
@@ -20,11 +23,13 @@ use Exception;
  */
 class UserService
 {
-    private UserRepositoryInterface $userRepository; // Dependência na interface
+    private UserRepositoryInterface $userRepository; 
+    private LogService $logService;
 
-    public function __construct(UserRepositoryInterface $userRepository)
+    public function __construct(UserRepositoryInterface $userRepository, LogService $logService)
     {
         $this->userRepository = $userRepository;
+        $this->logService = $logService;
     }
 
     /**
@@ -219,5 +224,104 @@ class UserService
     public function getUserById(int $userId): ?User
     {
         return $this->userRepository->findById($userId);
+    }
+
+     /**
+     * Autentica um usuário com base no email e senha.
+     * @param string $email O email do usuário.
+     * @param string $password A senha em texto puro.
+     * @return User|null O objeto User se a autenticação for bem-sucedida, ou null caso contrário.
+     * @throws Exception Se ocorrer um erro inesperado durante a autenticação.
+     */
+    public function authenticateUser(string $email, string $password): ?User
+    {
+        try {
+            $user = $this->userRepository->findByEmail($email);
+
+            if (!$user) {
+                // Usuário não encontrado
+                return null;
+            }
+
+            // Verifica a senha
+            if (password_verify($password, $user->getPswd())) {
+                // Senha correta
+                $this->logService->log('Auth', 'User authenticated successfully', $user->getId());
+                return $user;
+            } else {
+                // Senha incorreta
+                $this->logService->log('Auth', 'Authentication failed: Incorrect password', $user->getId());
+                return null;
+            }
+        } catch (Exception $e) {
+            $this->logService->log('ERROR', 'Authentication service error', null, ['email' => $email, 'error' => $e->getMessage()]);
+            throw new Exception("Erro ao autenticar usuário: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Atualiza os dados de um usuário.
+     * @param UserUpdateDTO $userDTO
+     * @return bool True se a atualização foi bem-sucedida, false caso contrário.
+     * @throws Exception Se o usuário não for encontrado ou ocorrer um erro.
+     */
+    public function updateUser(UserUpdateDTO $userDTO): bool
+    {
+        if (empty($userDTO->id)) {
+            throw new \InvalidArgumentException("ID do usuário é necessário para atualização.");
+        }
+
+        $user = $this->userRepository->findById($userDTO->id);
+        if (!$user) {
+            throw new Exception("Usuário com ID {$userDTO->id} não encontrado.");
+        }
+
+        // Aplicar atualizações apenas se os dados estiverem presentes no DTO
+        if ($userDTO->email !== null) {
+            // Verificar se o novo email já está em uso por outro usuário
+            $existingUserWithEmail = $this->userRepository->findByEmail($userDTO->email);
+            if ($existingUserWithEmail && $existingUserWithEmail->getId() !== $user->getId()) {
+                throw new Exception("Email '{$userDTO->email}' já está em uso por outro usuário.");
+            }
+            $user->setEmail($userDTO->email);
+        }
+        if ($userDTO->firstName !== null) {
+            $user->setFirstName($userDTO->firstName);
+        }
+        if ($userDTO->lastName !== null) {
+            $user->setLastName($userDTO->lastName);
+        }
+        if ($userDTO->role !== null) {
+            // Adicionar validação de papel se necessário (e.g., se o papel é um ENUM válido)
+            $user->setRole($userDTO->role);
+        }
+        if ($userDTO->password !== null && !empty($userDTO->password)) {
+            $user->setPswd(password_hash($userDTO->password, PASSWORD_BCRYPT));
+        }
+
+        try {
+            $success = $this->userRepository->update($user);
+            if ($success) {
+                $this->logService->log('User', 'User profile updated', $user->getId());
+            }
+            return $success;
+        } catch (Exception $e) {
+            $this->logService->log('ERROR', 'Failed to update user', $user->getId(), ['error' => $e->getMessage()]);
+            throw new Exception("Erro ao atualizar usuário: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtém todos os usuários.
+     * @return User[]
+     */
+    public function getAllUsers(): array
+    {
+        try {
+            return $this->userRepository->findAll();
+        } catch (Exception $e) {
+            $this->logService->log('ERROR', 'Failed to retrieve all users', null, ['error' => $e->getMessage()]);
+            throw new Exception("Erro ao buscar todos os usuários: " . $e->getMessage());
+        }
     }
 }

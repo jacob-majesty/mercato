@@ -4,8 +4,7 @@ namespace App\Service;
 
 use App\DTO\SellerCreateDTO;
 use App\Model\Seller;
-use App\Repository\SellerRepositoryInterface;
-use App\Repository\ProductRepositoryInterface; 
+use App\Interfaces\SellerRepositoryInterface;
 use App\DTO\ProductCreateDTO;
 use App\DTO\ProductUpdateDTO;
 use App\Service\ProductService;

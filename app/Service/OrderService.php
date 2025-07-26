@@ -2,9 +2,8 @@
 
 namespace App\Service;
 
-use App\Repository\OrderRepositoryInterface;
-use App\Repository\ProductRepositoryInterface;
-use App\Repository\CouponRepositoryInterface;
+use App\Interfaces\OrderRepositoryInterface;
+use App\Interfaces\CouponRepositoryInterface;
 use App\Model\Order;
 use App\Model\OrderItem;
 use App\Model\Address;
@@ -15,19 +14,24 @@ use DateTime;
 
 class OrderService
 {
-    private OrderRepositoryInterface $orderRepository;
+   private OrderRepositoryInterface $orderRepository;
     private ProductService $productService;
-    private CouponRepositoryInterface $couponRepository;
+    private LogService $logService; // Adicionado LogService
+    private CouponRepositoryInterface $couponRepository; // Adicionado CouponRepository
 
+    // Ordem correta dos argumentos para o construtor
     public function __construct(
         OrderRepositoryInterface $orderRepository,
         ProductService $productService,
-        CouponRepositoryInterface $couponRepository
+        LogService $logService, // LogService é o terceiro argumento
+        CouponRepositoryInterface $couponRepository // CouponRepository é o quarto argumento
     ) {
         $this->orderRepository = $orderRepository;
         $this->productService = $productService;
+        $this->logService = $logService;
         $this->couponRepository = $couponRepository;
     }
+
 
     public function getOrderById(int $orderId): ?Order
     {

@@ -8,9 +8,8 @@ use App\Model\Order;
 use App\DTO\ClientCreateDTO;
 use App\DTO\OrderCreateDTO;
 use App\DTO\CartAddItemDTO; // Importar o CartAddItemDTO
-use App\Repository\ClientRepositoryInterface;
-use App\Repository\UserRepositoryInterface; // Adicionado para verificar email globalmente se necessário
-use App\Repository\OrderRepositoryInterface; // Usar a interface, não a implementação direta
+use App\Interfaces\ClientRepositoryInterface;
+use App\Interfaces\OrderRepositoryInterface; // Usar a interface, não a implementação direta
 use Exception;
 use DateTime;
 
