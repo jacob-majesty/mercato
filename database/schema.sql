@@ -122,9 +122,9 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- Usuários de Exemplo (senhas: password123)
 -- As senhas devem ser hashadas na aplicação real ou antes de inserir em produção
 INSERT INTO users (email, first_name, last_name, pswd, role) VALUES
-('admin@mercato.com', 'Admin', 'User', '$2y$10$wK1G7F2N5S0X8Y9Z0A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4', 'admin'), -- Senha hashada para 'password123'
-('seller@mercato.com', 'Seller', 'User', '$2y$10$wK1G7F2N5S0X8Y9Z0A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4', 'seller'),
-('client@mercato.com', 'Client', 'User', '$2y$10$wK1G7F2N5S0X8Y9Z0A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4', 'client');
+('admin@mercato.com', 'Admin', 'User', '$2y$10$ULlr1Z.uX3OoU72iRNPDTugmfkV3iolJ1M61yRGx1xURuPDwSRr3.', 'admin'), -- Senha hashada para 'password123'
+('seller@mercato.com', 'Seller', 'User', '$2y$10$ULlr1Z.uX3OoU72iRNPDTugmfkV3iolJ1M61yRGx1xURuPDwSRr3.', 'seller'),
+('client@mercato.com', 'Client', 'User', '$2y$10$ULlr1Z.uX3OoU72iRNPDTugmfkV3iolJ1M61yRGx1xURuPDwSRr3.', 'client');
 
 -- Produtos de Exemplo (do seu assets.sql, ajustado para sua tabela sem category_id)
 INSERT IGNORE INTO products (name, price, category, description, image_url, stock, seller_id) VALUES
