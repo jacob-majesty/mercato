@@ -3,125 +3,221 @@
 namespace App\Core;
 
 use Exception;
+use Throwable; // Para capturar qualquer tipo de erro lançável
+use ReflectionClass; // Adicionar para clareza
+use ReflectionParameter; // Adicionar para clareza
+use ReflectionNamedType; // Adicionar para clareza
 
 /**
- * Sistema de Roteamento
- * Objetivo: responsável por mapear URLs para controladores e ações específicas, e aplicar middlewares.
+ * Class Router
+ * @package App\Core
+ *
+ * Gerencia o roteamento de URLs para Controladores e ações.
  */
 class Router
 {
     protected array $routes = [];
     protected array $middlewares = [];
+    protected array $globalDependencies = []; // Para armazenar todas as dependências
 
     /**
-     * Adiciona uma rota GET.
+     * Define uma rota GET.
      * @param string $uri
-     * @param array $controllerAction Ex: [ProductController::class, 'index']
-     * @param array $middlewares Array de nomes de middlewares a serem aplicados.
+     * @param array $handler Array [Controller::class, 'method']
+     * @param array $middlewares Array de nomes de middlewares a aplicar
      */
-    public function get(string $uri, array $controllerAction, array $middlewares = []): void
+    public function get(string $uri, array $handler, array $middlewares = []): void
     {
-        $this->routes['GET'][$uri] = ['action' => $controllerAction, 'middlewares' => $middlewares];
+        $this->addRoute('GET', $uri, $handler, $middlewares);
     }
 
     /**
-     * Adiciona uma rota POST.
+     * Define uma rota POST.
      * @param string $uri
-     * @param array $controllerAction
-     * @param array $middlewares Array de nomes de middlewares a serem aplicados.
+     * @param array $handler Array [Controller::class, 'method']
+     * @param array $middlewares Array de nomes de middlewares a aplicar
      */
-    public function post(string $uri, array $controllerAction, array $middlewares = []): void
+    public function post(string $uri, array $handler, array $middlewares = []): void
     {
-        $this->routes['POST'][$uri] = ['action' => $controllerAction, 'middlewares' => $middlewares];
+        $this->addRoute('POST', $uri, $handler, $middlewares);
     }
 
     /**
-     * Define um middleware.
-     * @param string $name Nome do middleware (ex: 'auth', 'admin').
-     * @param string $class O FQCN da classe do middleware.
+     * Adiciona uma rota ao roteador.
+     * @param string $method
+     * @param string $uri
+     * @param array $handler
+     * @param array $middlewares
+     */
+    protected function addRoute(string $method, string $uri, array $handler, array $middlewares): void
+    {
+        // Normaliza a URI para remover barras extras no final, exceto para a raiz
+        $uri = ($uri === '') ? '/' : rtrim($uri, '/');
+        $this->routes[$method][$uri] = ['handler' => $handler, 'middlewares' => $middlewares];
+    }
+
+    /**
+     * Define um middleware nomeado.
+     * @param string $name
+     * @param string $class O nome da classe do middleware.
+     * @throws Exception Se a classe do middleware não existir ou não implementar MiddlewareInterface.
      */
     public function middleware(string $name, string $class): void
     {
+        if (!class_exists($class)) {
+            throw new Exception("Middleware class '{$class}' not found.");
+        }
+        // Opcional: Verificar se implementa uma interface MiddlewareInterface
+        // if (!in_array(MiddlewareInterface::class, class_implements($class))) {
+        //     throw new Exception("Middleware class '{$class}' must implement MiddlewareInterface.");
+        // }
         $this->middlewares[$name] = $class;
     }
 
     /**
-     * Despacha a requisição para a rota correta.
-     * @param Request $request
-     * @return Response
-     * @throws Exception Se a rota não for encontrada ou houver erro.
+     * Define as dependências globais que serão injetadas nos controladores.
+     * @param array $dependencies
      */
-    public function dispatch(Request $request): Response
+    public function setGlobalDependencies(array $dependencies): void
     {
-        $uri = $request->getUri();
-        $method = $request->getMethod();
-
-        if (!isset($this->routes[$method][$uri])) {
-            // Pode ser uma rota com parâmetros, tentar encontrar
-            foreach ($this->routes[$method] as $routeUri => $routeData) {
-                // Converte /products/{id} para regex #^/products/(\d+)$#
-                $pattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '([a-zA-Z0-9_]+)', $routeUri);
-                if (preg_match('#^' . $pattern . '$#', $uri, $matches)) {
-                    array_shift($matches); // Remove a correspondência completa
-                    $request->setRouteParams($matches); // Armazena os parâmetros na requisição
-                    $controllerAction = $routeData['action'];
-                    $routeMiddlewares = $routeData['middlewares'];
-                    return $this->callController($request, $controllerAction, $routeMiddlewares);
-                }
-            }
-            throw new Exception("Rota '$uri' não encontrada para o método '$method'.", 404);
-        }
-
-        $route = $this->routes[$method][$uri];
-        $controllerAction = $route['action'];
-        $routeMiddlewares = $route['middlewares'];
-
-        return $this->callController($request, $controllerAction, $routeMiddlewares);
+        $this->globalDependencies = $dependencies;
     }
 
     /**
-     * Chama o controlador e executa os middlewares.
+     * Despacha a requisição para o controlador e método apropriados.
      * @param Request $request
-     * @param array $controllerAction
-     * @param array $routeMiddlewares
+     * @return Response
+     * @throws Exception Se a rota não for encontrada, o controlador ou método não existirem, ou o middleware falhar.
+     */
+    public function dispatch(Request $request): Response
+    {
+        $method = $request->getMethod();
+        $uri = $request->getUri();
+
+        // Normaliza a URI de entrada
+        $uri = ($uri === '') ? '/' : rtrim($uri, '/'); // Garante que '/' seja '/' e 'login/' seja 'login'
+        $uri = strtok($uri, '?'); // Remove a query string
+
+        // ==== DEBUGGING: Log da URI de entrada e rotas disponíveis ====
+        error_log("Incoming URI: '" . $uri . "' (Method: " . $method . ")");
+        error_log("Available " . $method . " routes: " . json_encode(array_keys($this->routes[$method] ?? [])));
+        // =============================================================
+
+        // Tenta encontrar uma rota com correspondência exata primeiro
+        if (isset($this->routes[$method][$uri])) {
+            $routeData = $this->routes[$method][$uri];
+            // ==== DEBUGGING: Log de correspondência exata ====
+            error_log("Exact match found for URI: '" . $uri . "'");
+            // =====================================
+            return $this->processRoute($request, $routeData, []); // Sem parâmetros de rota para correspondência exata
+        }
+
+        // Se não houver correspondência exata, tenta com padrões regex para parâmetros
+        foreach ($this->routes[$method] ?? [] as $routeUri => $routeData) {
+            // Pula rotas que não contêm parâmetros (já tratadas pela correspondência exata)
+            if (strpos($routeUri, '{') === false) {
+                continue;
+            }
+
+            // Converte a URI da rota para uma regex para capturar parâmetros
+            $pattern = '@^' . preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[^/]+)', $routeUri) . '$@';
+
+            // ==== DEBUGGING: Log de tentativa de regex ====
+            error_log("Trying regex pattern: '" . $pattern . "' for route: '" . $routeUri . "'");
+            // ======================================
+
+            if (preg_match($pattern, $uri, $matches)) {
+                // Extrai parâmetros da URI
+                $routeParams = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
+                // ==== DEBUGGING: Log de correspondência regex ====
+                error_log("Regex match found for URI: '" . $uri . "' with route: '" . $routeUri . "'. Params: " . json_encode($routeParams));
+                // =====================================
+                return $this->processRoute($request, $routeData, $routeParams);
+            }
+        }
+
+        // Se nenhuma rota corresponder
+        throw new Exception("Página não encontrada.", 404);
+    }
+
+    /**
+     * Processa a rota após uma correspondência bem-sucedida.
+     * @param Request $request
+     * @param array $routeData
+     * @param array $routeParams
      * @return Response
      * @throws Exception
      */
-    protected function callController(Request $request, array $controllerAction, array $routeMiddlewares): Response
+    protected function processRoute(Request $request, array $routeData, array $routeParams): Response
     {
-        // 1. Executar Middlewares
-        foreach ($routeMiddlewares as $middlewareName) {
+        $request->setRouteParams($routeParams);
+
+        $handler = $routeData['handler'];
+        $middlewaresToApply = $routeData['middlewares'];
+
+        // Aplica os middlewares
+        foreach ($middlewaresToApply as $middlewareName) {
             if (!isset($this->middlewares[$middlewareName])) {
-                throw new Exception("Middleware '$middlewareName' não registrado.");
+                throw new Exception("Middleware '{$middlewareName}' não definido.");
             }
             $middlewareClass = $this->middlewares[$middlewareName];
-            $middleware = new $middlewareClass(); // Instancia o middleware
-            $middleware->handle($request); // O middleware pode lançar uma exceção ou redirecionar
+            $middlewareInstance = new $middlewareClass();
+            // O middleware deve retornar explicitamente true para continuar
+            if (!$middlewareInstance->handle($request)) {
+                // Se o middleware retornar false, a requisição é negada (e o middleware já deve ter lidado com o redirecionamento/saída)
+                // Se o middleware não chamou exit(), então lançamos uma exceção 403 aqui.
+                // No seu caso, os middlewares chamam exit(), então esta linha pode não ser atingida.
+                throw new Exception("Acesso negado por middleware: " . $middlewareName, 403);
+            }
         }
 
-        // 2. Chamar o Controlador
-        list($controllerClass, $method) = $controllerAction;
+        $controllerClass = $handler[0];
+        $method = $handler[1];
 
         if (!class_exists($controllerClass)) {
-            throw new Exception("Controlador '$controllerClass' não encontrado.");
-        }
-        if (!method_exists($controllerClass, $method)) {
-            throw new Exception("Método '$method' não encontrado no controlador '$controllerClass'.");
+            throw new Exception("Controlador '{$controllerClass}' não encontrado.", 404);
         }
 
-        // Instancia o controlador. Injeção de dependências pode ser feita aqui.
-        // Por simplicidade, assumimos que os serviços serão passados para os controladores.
-        // Uma forma mais robusta envolveria um Container de Inversão de Controle (IoC).
-        $controller = new $controllerClass();
+        $reflectionClass = new ReflectionClass($controllerClass);
+        $constructor = $reflectionClass->getConstructor();
 
-        // Passa a Request para o método do controlador.
-        // Parâmetros de rota são acessados via $request->getRouteParams()
-        $response = call_user_func_array([$controller, $method], [$request]);
-
-        if (!$response instanceof Response) {
-            throw new Exception("A ação do controlador deve retornar uma instância de Response.");
+        $controllerInstance = null;
+        if ($constructor) {
+            $params = $constructor->getParameters();
+            $dependenciesToInject = [];
+            foreach ($params as $param) {
+                $paramType = $param->getType();
+                
+                // Verifica se o parâmetro tem um tipo declarado e se é um ReflectionNamedType
+                if ($paramType instanceof ReflectionNamedType) {
+                    // Agora podemos usar isBuiltin() no objeto ReflectionNamedType
+                    if (!$paramType->isBuiltin()) { // Verifica se NÃO é um tipo built-in (string, int, bool, etc.)
+                        $paramClassName = $paramType->getName();
+                        $dependencyKey = lcfirst(basename(str_replace('\\', '/', $paramClassName)));
+                        
+                        if (isset($this->globalDependencies[$dependencyKey])) {
+                            $dependenciesToInject[] = $this->globalDependencies[$dependencyKey];
+                        } else {
+                            throw new Exception("Dependência '{$paramClassName}' para o construtor de '{$controllerClass}' não encontrada.");
+                        }
+                    } else {
+                        // É um tipo built-in (string, int, bool, etc.)
+                        throw new Exception("Parâmetro built-in '{$param->getName()}' no construtor de '{$controllerClass}' não pode ser injetado automaticamente via dependências globais. Apenas objetos são injetáveis desta forma.");
+                    }
+                } else {
+                    // Parâmetro sem tipo ou tipo inválido (ex: ReflectionUnionType, ReflectionIntersectionType, ou null)
+                    throw new Exception("Parâmetro '{$param->getName()}' no construtor de '{$controllerClass}' não tem tipo de classe declarado ou é um tipo complexo não suportado para injeção automática.");
+                }
+            }
+            $controllerInstance = $reflectionClass->newInstanceArgs($dependenciesToInject);
+        } else {
+            $controllerInstance = new $controllerClass();
         }
 
-        return $response;
+        if (!method_exists($controllerInstance, $method)) {
+            throw new Exception("Método '{$method}' não encontrado no controlador '{$controllerClass}'.", 404);
+        }
+
+        return $controllerInstance->$method($request);
     }
 }

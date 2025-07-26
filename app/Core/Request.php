@@ -67,4 +67,15 @@ class Request
     {
         return $this->routeParams[$index] ?? $default;
     }
+
+    /**
+     * Retorna o corpo da requisição bruta.
+     * Útil para requisições com Content-Type: application/json.
+     * @return string|null O corpo da requisição ou null se não houver.
+     */
+    public function getBody(): ?string
+    {
+        return file_get_contents('php://input');
+    }
+
 }
