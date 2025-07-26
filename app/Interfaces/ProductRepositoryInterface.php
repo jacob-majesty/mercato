@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repository;
+namespace App\Interfaces; 
 
 use App\Model\Product;
 
@@ -11,7 +11,7 @@ interface ProductRepositoryInterface
     public function save(Product $product): Product;
     public function update(Product $product): bool;
     public function delete(int $id): bool;
-    public function findBySellerId(int $sellerId): array; // Adicionado para SellerService
+    // public function findBySellerId(int $sellerId): array; // REMOVIDO: Duplicado com getProductsBySellerId
 
     /**
      * Busca produtos por um ID de vendedor específico.
@@ -49,5 +49,4 @@ interface ProductRepositoryInterface
      * @return int
      */
     public function countAll(): int;
- 
 }
