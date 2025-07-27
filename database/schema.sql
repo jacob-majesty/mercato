@@ -34,6 +34,8 @@ CREATE TABLE products (
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
     stock INT NOT NULL DEFAULT 0,
+    reserved INT NOT NULL DEFAULT 0, -- Nova coluna para estoque reservado
+    reserved_at TIMESTAMP NULL, -- Nova coluna para data de reserva
     image_url VARCHAR(255), -- Caminho para a imagem do produto (ex: /products/book1.jpg)
     category VARCHAR(100),
     seller_id INT, -- ID do usuário vendedor que cadastrou o produto
