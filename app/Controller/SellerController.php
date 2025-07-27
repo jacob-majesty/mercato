@@ -86,20 +86,21 @@ class SellerController
             return Response::json(['success' => false, 'message' => 'Não autenticado.'], 401);
         }
 
-        $data = $request->all();
+        $data = json_decode($request->getBody(), true);
 
-        // Crie o DTO
-        $productDTO = new ProductCreateDTO(
-        $data['name'] ?? '',
-        $data['description'] ?? '',
-        (float)($data['price'] ?? 0),
-        $data['category'] ?? '',
-        $data['image_url'] ?? null,
-        (int)($data['stock'] ?? 0),
-        $sellerId
-        );
+        // CORRIGIDO: Garante que $data é um array, mesmo que json_decode retorne null
+        if (!is_array($data)) {
+            $data = [];
+        }
+
+        // Adiciona o sellerId diretamente ao array de dados para o DTO
+        $data['sellerId'] = $sellerId;
 
         try {
+            // Passa o array $data diretamente para o construtor do DTO.
+            // O DTO agora é responsável por validar e converter os tipos.
+            $productDTO = new ProductCreateDTO($data);
+            
             $newProduct = $this->productService->createProduct($productDTO);
             $this->logService->log('Product', 'Product created', $sellerId, ['productId' => $newProduct->getId(), 'productName' => $newProduct->getName()]);
             return Response::json(['success' => true, 'message' => 'Produto criado com sucesso!', 'product_id' => $newProduct->getId()], 201);
@@ -111,7 +112,6 @@ class SellerController
             return Response::json(['success' => false, 'message' => 'Erro ao criar produto: ' . $e->getMessage()], 500);
         }
     }
-
     public function editProductForm(Request $request): Response
     {
         $sellerId = Authenticator::getUserId();
@@ -119,9 +119,9 @@ class SellerController
             return Response::redirect('/login');
         }
 
-        $productId = (int) $request->getRouteParam(0);
+        $productId = (int) $request->getRouteParam('id');
         if (!$productId) {
-            return Response::view('errors/400', ['message' => 'ID do produto não especificado.'], 400);
+            return Response::view('errors/400', ['message' => 'ID do produto não especificado ou inválido.'], 400);
         }
 
         try {
@@ -139,40 +139,37 @@ class SellerController
         }
     }
 
-    public function updateProduct(Request $request): Response
+     public function updateProduct(Request $request): Response
     {
         $sellerId = Authenticator::getUserId();
         if (!$sellerId) {
             return Response::json(['success' => false, 'message' => 'Não autenticado.'], 401);
         }
 
-        $productId = (int) $request->getRouteParam(0);
+         $productId = (int) $request->getRouteParam('id');
         if (!$productId) {
-            return Response::json(['success' => false, 'message' => 'ID do produto não especificado.'], 400);
+            return Response::json(['success' => false, 'message' => 'ID do produto não especificado ou inválido.'], 400);
         }
 
-        $data = $request->all(); // Obtenha todos os dados da requisição
+        $data = json_decode($request->getBody(), true);
+        // CORRIGIDO: Garante que $data é um array, mesmo que json_decode retorne null
+        if (!is_array($data)) {
+            $data = [];
+        }
 
-        // Crie o DTO de atualização.
-        // O ProductUpdateDTO deve ser construído com os dados que podem ser atualizados.
-        $productDTO = new ProductUpdateDTO(
-        $data['name'] ?? null,
-        $data['description'] ?? null,
-        isset($data['price']) ? (float)$data['price'] : null,
-        $data['category'] ?? null,
-        $data['image_url'] ?? null,
-        isset($data['stock']) ? (int)$data['stock'] : null
-       
-        );
+        // Adiciona o ID do produto diretamente ao array de dados para o DTO
+        $data['id'] = $productId;
 
         try {
-            // Verifique se o produto pertence ao vendedor antes de tentar atualizar
+            // Passa o array $data diretamente para o construtor do DTO.
+            $productDTO = new ProductUpdateDTO($data);
+
             $product = $this->productService->getProductById($productId);
             if (!$product || $product->getSellerId() !== $sellerId) {
                 return Response::json(['success' => false, 'message' => 'Você não tem permissão para atualizar este produto.'], 403);
             }
 
-            $success = $this->productService->updateProduct($productId, $productDTO);
+            $success = $this->productService->updateProduct($productDTO);
             if ($success) {
                 $this->logService->log('Product', 'Product updated', $sellerId, ['productId' => $productId]);
                 return Response::json(['success' => true, 'message' => 'Produto atualizado com sucesso!'], 200);
@@ -188,7 +185,7 @@ class SellerController
             return Response::json(['success' => false, 'message' => 'Erro ao atualizar produto: ' . $e->getMessage()], 500);
         }
     }
-
+    
     public function deleteProduct(Request $request): Response
     {
         $sellerId = Authenticator::getUserId();
@@ -196,9 +193,9 @@ class SellerController
             return Response::json(['success' => false, 'message' => 'Não autenticado.'], 401);
         }
 
-        $productId = (int) $request->getRouteParam(0); // Assumindo /seller/products/{id}/delete
+        $productId = (int) $request->getRouteParam('id');
         if (!$productId) {
-            return Response::json(['success' => false, 'message' => 'ID do produto não especificado.'], 400);
+            return Response::json(['success' => false, 'message' => 'ID do produto não especificado ou inválido.'], 400);
         }
 
         try {

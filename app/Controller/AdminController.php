@@ -82,7 +82,7 @@ class AdminController
     public function showUser(Request $request): Response
     {
         $adminId = Authenticator::getUserId();
-        $userId = (int) $request->getRouteParam(0);
+        $userId = (int) $request->getRouteParam('id');
 
         if (!$userId) {
             return Response::view('errors/400', ['message' => 'ID do usuário não especificado.'], 400);
@@ -104,7 +104,7 @@ class AdminController
     public function updateUser(Request $request): Response
     {
         $adminId = Authenticator::getUserId();
-        $userId = (int) $request->getRouteParam(0);
+        $userId = (int) $request->getRouteParam('id');
 
         if (!$userId) {
             return Response::json(['success' => false, 'message' => 'ID do usuário não especificado.'], 400);
@@ -143,7 +143,7 @@ class AdminController
     public function deleteUser(Request $request): Response
     {
         $adminId = Authenticator::getUserId();
-        $userId = (int) $request->getRouteParam(0);
+        $userId = (int) $request->getRouteParam('id');
 
         if (!$userId) {
             return Response::json(['success' => false, 'message' => 'ID do usuário não especificado.'], 400);
@@ -155,7 +155,7 @@ class AdminController
         }
 
         try {
-            $success = $this->userService->deleteUserAccount($userId); // Chamando deleteUser do UserService
+            $success = $this->userService->deleteUser($userId); // Chamando deleteUser do UserService
             if ($success) {
                 $this->logService->log('Admin', 'Deleted user', $adminId, ['deletedUserId' => $userId]);
                 return Response::json(['success' => true, 'message' => 'Usuário deletado com sucesso!'], 200);
@@ -200,7 +200,7 @@ class AdminController
     public function updateOrderStatus(Request $request): Response
     {
         $adminId = Authenticator::getUserId();
-        $orderId = (int) $request->getRouteParam(0); // Assumindo /admin/orders/{id}/status
+        $orderId = (int) $request->getRouteParam('id'); // Assumindo /admin/orders/{id}/status
         $data = json_decode($request->getBody(), true);
         $newStatus = $data['status'] ?? null;
 
