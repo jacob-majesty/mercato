@@ -1,6 +1,6 @@
 # Mercato
 
-**Mercato** é um sistema simples e funcional de **compra e venda de ingressos ou produtos**, com controle de usuários, clientes e estoque. O projeto foi desenvolvido com foco em simplicidade, organização e boas práticas de desenvolvimento backend em **PHP puro**, utilizando **MySQL** como banco de dados e **Bootstrap** no frontend para uma interface responsiva.
+**Mercato** é um sistema simples e funcional de **compra e venda de produtos**, com controle de usuários, clientes e estoque. O projeto foi desenvolvido com foco em simplicidade, organização e boas práticas de desenvolvimento backend em **PHP puro**, utilizando **MySQL** como banco de dados e **Bootstrap** no frontend para uma interface responsiva.
 
 [**Enunciado do projeto**](https://github.com/jacob-majesty/mercato/blob/main/ENUNCIADO_MERCATO.md)
 
@@ -229,81 +229,79 @@ Implementar três perfis de usuário (Admin, Vendedor, Cliente) para garantir se
   - Vendedores: Gerenciam apenas seus produtos e clientes relacionados
   - Clientes: Acesso limitado ao próprio histórico de compras
 
-- **Segurança Reforçada**
+# Instruções para rodar o projeto
+0. **Clone o repositório**
 
-  - Aplicação do princípio do menor privilégio
-  - Redução de superfície de ataque e riscos de dados
-
-- **Lógica de Autorização Simplificada**
-
-  - Middlewares dedicados (authMiddleware, ownerMiddleware, adminMiddleware)
-  - Código modular e de fácil manutenção
-
-- **Base para Escalabilidade**
-
-  - Estrutura pronta para adição de novas funcionalidades por perfil
-  - Suporte a futuras integrações sem refatoração complexa
-
-- **Alinhamento com Regras de Negócio**
-  - Modelagem reflete as reais necessidades da plataforma
-  - Experiência intuitiva para cada tipo de usuário
-
-**Implementação:**
-
-- Definição clara de permissões por role
-- Middlewares específicos para validação de acesso
-- Segregação de visualizações e funcionalidades na interface
-
-## Uso de Interfaces em Services
-
-```php
-interface IProductService {
-    public function createProduct(array $data): Product;
-}
-
-class ProductService implements IProductService {
-    // Implementação...
-}
+```
+git clone https://github.com/jacob-majesty/mercato.git
 ```
 
-Contrato claro: Define métodos obrigatórios, garantindo coesão.
+1. **Acesse a pasta do projeto**
 
-- Desacoplamento: Permite trocar implementações sem afetar dependentes (ex.: DatabaseService → APIService).
+```
+cd mercato
+```
+2. **Executar com Docker** 
 
-- Testabilidade: Facilita mocking em testes unitários.
+```bash
+docker-compose up -d
+```
+3. **Instalação do Composer no Container**
 
-- Polimorfismo: Múltiplas implementações para o mesmo comportamento (ex.: PaymentService vs PayPalService).
+**Objetivo:**  
+Instalar o Composer exclusivamente dentro do container Docker para manter o ambiente de desenvolvimento isolado e consistente.
 
-  **Benefícios**: Manutenibilidade, escalabilidade e aderência a SOLID.
+**Passos:**
 
-## Camada Repository: Separação de Responsabilidades em MVC
+a. Acesse o container:
 
-- Separação clara de preocupações (SOLID - SRP):
+   ```sh
+   docker-compose exec <php_container_id> bash ou docker-compose exec <php_container_id> sh
+   ```
 
-- Service: Lógica de negócio.
+b. instale as dependências:
+   ```sh
+   composer install
+   ```
+4. **Acesse o sistema no navegador**
 
-- Repository: Persistência de dados (CRUD).
+```
+http://localhost:80
+```
 
-- Abstração do banco de dados:
+### Teste do Sistema - Mercato
 
-- Troque o mecanismo de persistência (MySQL → MongoDB) sem impactar os Services.
+## Credenciais de acesso (Logar com credenciais)
+- **Admin:** `admin@mercato.com` | Senha: `password123` (hash)
+- **Vendedor:** `seller@mercato.com` | Senha: `password123` (hash)
+- **Cliente:** `client@mercato.com` | Senha: `password123` (hash)
 
-- Testabilidade: Mock de repositórios em testes unitários (isolamento da lógica de negócio).
+<!--
+### Configurar o banco de dados
 
-- Reusabilidade: Centraliza consultas complexas para uso em múltiplos Services.
+0. **Copie o arquivo** do host para o container:
+```bash
+docker cp mercato/database/schema.sql <container_id_or_name>:/tmp/
+````
+1. Acesse o container MySQL:
+```bash
+docker exec -it <container_id_or_name> sh
+```
+2. Conecte ao MySQL:
+````
+mysql -u user -p mercato_db
+````
+Digite a senha quando solicitado: secret
 
-**Benefícios Chave**
+3. No prompt do MySQL, execute:
+````
+SOURCE /tmp/schema.sql;
+USE mercato_db;
+SHOW TABLES;
+````
+-->
 
-- Código mais limpo: Services focam em regras, Repositories em dados.
-- Flexibilidade: Migre de ORM ou banco de dados sem refatorar Services.
-- Manutenção simplificada: Alterações na persistência ficam contidas no Repository.
 
-## Gerador de pdf no Utility
-
-- Instalação do Dompdf: Lembre-se de rodar composer require dompdf/dompdf no seu terminal para que a classe Dompdf esteja disponível.
-- Fontes no Dompdf: Para caracteres especiais e acentuação, é crucial configurar uma fonte que os suporte (DejaVu Sans é uma boa opção padrão para isso no Dompdf).
-- Caminhos (storagePath): Ajuste o storagePath no construtor de PdfGenerator conforme a estrutura do seu projeto.
-  O exemplo **DIR** . '/../../public/uploads/receipts' assume que você tem uma pasta public/uploads/receipts acessível via web.
 
 ## Tecnologias Utilizadas
 
@@ -326,13 +324,34 @@ Contrato claro: Define métodos obrigatórios, garantindo coesão.
 
 - Docker Compose com PHP + MySQL + Nginx
 
+## Uso de Interfaces 
+
+```php
+interface ProductRepositoryInterface {
+    public function createProduct(array $data): Product;
+}
+
+class ProductRepository implements ProductRepositoryInterface {
+    // Implementação...
+}
+```
+
+Contrato claro: Define métodos obrigatórios, garantindo coesão.
+
+- Desacoplamento: Permite trocar implementações sem afetar dependentes 
+
+- Testabilidade: Facilita mocking em testes unitários.
+
+  **Benefícios**: Manutenibilidade, escalabilidade e aderência a SOLID.
+
+
 ```
 mercato/
 ├── app/
 │   ├── Controller/           # Lógica de controle e rotas (ex: ProdutoController.php)
 │   ├── Core/                 # Gerenciar o sistema de rotas
 │   ├── Model/                # Modelos de dados (ex: Produto.php, Cliente.php)
-│   ├── Interfaces/           # Definição do "contrato" que as classes do Service e Repository devem seguir
+│   ├── Interfaces/           # Definição do "contrato" que as classes do Repository devem seguir
 │   ├── Service/              # Regras de negócio (ex: CompraService.php)
 │   ├── Repository            # Camada de persistência de dados
 │   ├── DTO/                  # Objetos de Transferência de Dados (ex: ProdutoDTO.php)
@@ -413,114 +432,7 @@ src/views/
 │   ├── 404.php             # Página não encontrada
 │   └── 500.php             # Erro interno
 └── home.php                # Página inicial
-
 ````
-
-### **Passo 3: Instalação do Composer no Container**
-
-**Objetivo:**  
-Instalar o Composer exclusivamente dentro do container Docker para manter o ambiente de desenvolvimento isolado e consistente.
-
-**Passos:**
-
-1. Acesse o container:
-
-   ```sh
-   docker-compose exec app bash
-   ```
-
-2. Instale o Composer:
-
-   ```sh
-   curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-   ```
-
-3. Saia e instale as dependências:
-   ```sh
-   exit
-   docker-compose exec app composer install
-   ```
-
-**Por que fazer isso?**
-
-- Elimina a necessidade de instalar PHP/Composer no host.
-- Garante consistência entre ambientes (desenvolvimento, testes, produção).
-- Isola as dependências do projeto (`vendor/`) dentro do container.
-
-**Observações:**
-
-- O diretório `vendor/` é recriado automaticamente ao rodar `composer install` no container.
-- Para adicionar dependências:
-  ```sh
-  docker-compose exec app composer require pacote/nome
-  ```
-
-Esta abordagem mantém o host limpo e o projeto portável.
-
-## Como Rodar o Projeto
-
-1. **Clone o repositório**
-
-```
-git clone https://github.com/jacob-majesty/mercato.git
-```
-
-2. **Acesse a pasta do projeto**
-
-```
-cd mercato
-```
-
-3. **Suba o servidor local**
-
-Com PHP embutido:
-
-```
-php -S localhost:8000 -t public
-```
-
-Ou configure em um servidor Apache/Nginx apontando para a pasta `public/`.
-
-4. **Acesse no navegador**
-
-```
-http://localhost:8000
-```
-
-### Configurar variáveis de ambiente
-
-Crie um arquivo `.env` com as variáveis necessárias (exemplo: banco, path, etc.)
-
-### Instalar dependências
-
-```bash
-composer install
-```
-
-### Configurar o banco de dados
-
-- Configure `config/database.php` com os dados do seu banco.
-- Importe o script `.sql` para criar as tabelas (se for MySQL).
-
-### Executar com Docker (opcional)
-
-```bash
-docker-compose up -d
-```
-
-Acesse em: [http://localhost](http://localhost)
-
----
-
-## ▶️ Executando o sistema (sem Docker)
-
-1. Execute o servidor embutido do PHP:
-
-```bash
-php -S localhost:8000 -t public
-```
-
-2. Acesse: [http://localhost:8000](http://localhost:8000)
 
 ---
 
@@ -540,7 +452,6 @@ php -S localhost:8000 -t public
 - [x] Detalhes do produto (sem compra)
 - [x] Carrinho com `$_SESSION['carrinho']`
 - [x] Cadastro e login de clientes
-- [x] Recuperação de senha por e-mail
 
 ### Autenticação e Sessão
 
@@ -570,13 +481,8 @@ php -S localhost:8000 -t public
 
 ### Cupons e Descontos
 
-- [x] Estrutura de cupons com usos restantes
 - [x] Aplicação de cupons no checkout
 - [x] Descontos em tempo real
-
-  - "BEMVINDO15" — Primeira compra (15%)
-  - R\$50 OFF (para produtos acima de R\$500)
-  - Frete grátis acima de R\$200
 
 ### Segurança
 
@@ -596,19 +502,20 @@ php -S localhost:8000 -t public
 ## 💡 Bônus Implementados (Opcional)
 
 - [x] Sistema de logs administrativos
-- [x] Timer visual para reserva de estoque
-- [x] Envio simulado de e-mails
+- [x] Paginação do produtos
+- [x] Testes
 - [x] Feedback visual com Bootstrap (alertas)
 
----
 
 ---
+<img width="961" height="405" alt="image" src="https://github.com/user-attachments/assets/ee91e32b-3ac1-49de-ba69-29360a80b284" />
 
-## 🔗 Repositório
+<img width="960" height="505" alt="image" src="https://github.com/user-attachments/assets/8970f3f7-3e8f-4342-8fd2-b23f2621577d" />
 
-[https://github.com/jacob-majesty/mercato](https://github.com/jacob-majesty/mercato)
+<img width="1407" height="532" alt="image" src="https://github.com/user-attachments/assets/750eadd2-efb9-49f2-b334-d9fdca943bdc" />
 
----
+
+
 
 ## Licença
 
