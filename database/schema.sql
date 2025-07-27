@@ -70,6 +70,7 @@ CREATE TABLE cart_items (
 -- Tabela de Endereços
 CREATE TABLE addresses (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    client_id INT NOT NULL, --  Adicionado para associar o endereço ao cliente
     street VARCHAR(255) NOT NULL,
     number VARCHAR(50) NOT NULL,
     complement VARCHAR(255) DEFAULT NULL,
@@ -78,14 +79,16 @@ CREATE TABLE addresses (
     state VARCHAR(255) NOT NULL,
     zip_code VARCHAR(20) NOT NULL,
     country VARCHAR(100) NOT NULL DEFAULT 'Brasil',
+    recipient VARCHAR(255) NOT NULL, -- Adicionado para o nome do destinatário
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES users(id) -- Opcional, mas recomendado para integridade referencial
 );
 
 -- Tabela de Pedidos
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    client_id INT NOT NULL,
+    client_id INT NOT NULL, --  Coluna client_id está presente
     address_id INT NOT NULL, -- Agora é uma chave estrangeira para a tabela addresses
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     total_amount DECIMAL(10, 2) NOT NULL,
