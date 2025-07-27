@@ -60,6 +60,7 @@ CREATE TABLE cart_items (
     cart_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
     unit_price DECIMAL(10, 2) NOT NULL, -- CORRIGIDO: Adicionada a coluna unit_price
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
