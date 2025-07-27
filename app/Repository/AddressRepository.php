@@ -35,33 +35,29 @@ class AddressRepository
         return $this->mapToAddress($data);
     }
 
-    public function save(Address $address): Address
+    public function save(Address $address): bool
     {
-        // SQL para inserir um novo endereço. Inclui created_at e updated_at.
-        $sql = "INSERT INTO addresses (street, number, complement, neighborhood, city, state, zip_code, country, created_at, updated_at) VALUES (:street, :number, :complement, :neighborhood, :city, :state, :zip_code, :country, :created_at, :updated_at)";
+        // Corrigido: Incluindo 'client_id' e 'neighborhood' na query
+        $sql = "INSERT INTO addresses (
+                    client_id, street, number, complement, neighborhood, city, state, zip_code, country
+                ) VALUES (
+                    :clientId, :street, :number, :complement, :neighborhood, :city, :state, :zipCode, :country
+                )";
+        
         $stmt = $this->pdo->prepare($sql);
 
-        try {
-            $currentTimestamp = (new DateTime())->format('Y-m-d H:i:s');
-            $stmt->execute([
-                'street' => $address->getStreet(),
-                'number' => $address->getNumber(),
-                'complement' => $address->getComplement(),
-                'neighborhood' => $address->getNeighborhood(),
-                'city' => $address->getCity(),
-                'state' => $address->getState(),
-                'zip_code' => $address->getZipCode(),
-                'country' => $address->getCountry(),
-                'created_at' => $currentTimestamp,
-                'updated_at' => $currentTimestamp
-            ]);
-        } catch (Exception $e) {
-            error_log("AddressRepository: Erro ao salvar endereço: " . $e->getMessage());
-            throw $e;
-        }
+        // Corrigido: Bind dos novos parâmetros
+        $stmt->bindValue(':clientId', $address->getClientId());
+        $stmt->bindValue(':street', $address->getStreet());
+        $stmt->bindValue(':number', $address->getNumber());
+        $stmt->bindValue(':complement', $address->getComplement());
+        $stmt->bindValue(':neighborhood', $address->getNeighborhood());
+        $stmt->bindValue(':city', $address->getCity());
+        $stmt->bindValue(':state', $address->getState());
+        $stmt->bindValue(':zipCode', $address->getZipCode());
+        $stmt->bindValue(':country', $address->getCountry());
 
-        $address->setId((int)$this->pdo->lastInsertId());
-        return $address;
+        return $stmt->execute();
     }
 
     /**
@@ -70,22 +66,25 @@ class AddressRepository
      * @param array $data
      * @return Address
      */
+    
     private function mapToAddress(array $data): Address
-    {
-        // A ordem dos argumentos no construtor deve ser:
-        // id, street, number, complement, neighborhood, city, state, zip_code, country, created_at, updated_at
-        return new Address(
-            $data['id'],
-            $data['street'],
-            $data['number'],
-            $data['complement'] ?? null,
-            $data['neighborhood'],
-            $data['city'],
-            $data['state'],
-            $data['zip_code'],
-            $data['country'],
-            new DateTime($data['created_at']),
-            $data['updated_at'] ? new DateTime($data['updated_at']) : null
-        );
-    }
+{
+    // Corrigido: A ordem dos argumentos no construtor da classe Address é crucial.
+    // A função agora reflete a nova assinatura do construtor:
+    // __construct(int $id, int $clientId, string $street, int $number, string $complement, string $neighborhood, string $city, string $state, string $zipCode, string $country, string $recipient)
+    
+    return new Address(
+        (int)$data['id'],
+        (int)$data['client_id'], // Adicionado o client_id
+        $data['street'] ?? '',
+        (int)($data['number'] ?? 0),
+        $data['complement'] ?? null,
+        $data['neighborhood'] ?? '', // Adicionado o neighborhood
+        $data['city'] ?? '',
+        $data['state'] ?? '',
+        $data['zip_code'] ?? '',
+        $data['country'] ?? '',
+        $data['recipient'] ?? '' //Adicionado o recipient
+    );
+}
 }
