@@ -113,9 +113,10 @@ class ClientService
         ]);
 
         // Chamar o CartService com o DTO
-        $updatedCart = $this->cartService->addItem($cartAddItemDTO);
-        $this->logService->log('Cart', 'Item added to cart', $clientId, ['productId' => $productId, 'quantity' => $quantity]);
-        return $updatedCart; // Retorna o objeto Cart
+        $this->cartService->removeItem($clientId, $productId);
+        $updatedCart = $this->cartService->getCart($clientId);
+        $this->logService->log('Cart', 'Item removed from cart', $clientId, ['productId' => $productId]);
+        return $updatedCart;
     }
 
     /**
@@ -161,31 +162,37 @@ class ClientService
      * @return Order O objeto Order criado.
      * @throws Exception Se o carrinho estiver vazio, dados inválidos ou falha na criação do pedido.
      */
-    public function checkout(int $clientId, OrderCreateDTO $orderDTO): Order
+    /**
+     * Finaliza o processo de compra, criando um pedido a partir de um DTO.
+     *
+     * @param OrderCreateDTO $orderDTO O DTO contendo todos os dados necessários para criar o pedido.
+     * @return Order O objeto Order criado.
+     * @throws Exception Se o carrinho estiver vazio, estoque insuficiente ou falha na criação do pedido.
+     */
+    public function checkout(OrderCreateDTO $orderDTO): Order
     {
-        $client = $this->clientRepository->findById($clientId);
-        if (!$client) {
-            throw new Exception("Cliente não encontrado.");
-        }
-
-        // O CartService::checkout já lida com a validação do carrinho vazio e a preparação dos itens
         try {
-            $order = $this->cartService->checkout(
-                $clientId, // Passa o ID do cliente
-                $orderDTO->paymentMethod,
-                $orderDTO->deliveryAddress,
-                $orderDTO->couponCode
-            );
-            $this->logService->log('Purchase', 'Checkout successful', $clientId, ['orderId' => $order->getId()]);
+            // Verifica se o carrinho do cliente no DTO tem itens
+            $cart = $this->cartService->getCart($orderDTO->clientId);
+            if (!$cart || empty($cart->getItems())) {
+                throw new Exception("Carrinho vazio. Não é possível finalizar a compra.");
+            }
+
+            // O OrderCreateDTO já deve ter os itens do carrinho mapeados
+            // e os dados de endereço e pagamento.
+            $order = $this->orderService->createOrder($orderDTO);
+
+            // Se o pedido for criado com sucesso, limpa o carrinho
+            $this->cartService->clearCart($orderDTO->clientId);
+            $this->logService->log('Client', 'Checkout completed', $orderDTO->clientId, ['orderId' => $order->getId(), 'cartId' => $cart->getId()]);
+
             return $order;
         } catch (Exception $e) {
-            $this->logService->log('ERROR', 'Checkout failed', $clientId, [
-                'source' => 'ClientService',
-                'error' => $e->getMessage(),
-            ]);
+            $this->logService->log('ERROR', 'Checkout failed', $orderDTO->clientId, ['error' => $e->getMessage()]);
             throw $e;
         }
     }
+
 
     /**
      * Retorna o histórico de pedidos para um cliente específico.

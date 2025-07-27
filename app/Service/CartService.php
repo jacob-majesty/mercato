@@ -11,6 +11,7 @@ use App\Service\ProductService; // Para verificar estoque e obter dados do produ
 use App\Service\OrderService;   // Para finalizar a compra
 use App\Service\LogService;     // Para registrar ações do carrinho
 use Exception;
+use InvalidArgumentException;
 
 /**
  * Class CartService
@@ -54,52 +55,66 @@ class CartService
     }
 
     /**
-     * Adiciona um produto ao carrinho do cliente, ou atualiza a quantidade se já existir.
-     * @param CartAddItemDTO $dto
-     * @return Cart O carrinho atualizado.
-     * @throws Exception Se o produto não for encontrado ou o estoque for insuficiente.
-     */
-    public function addItem(CartAddItemDTO $dto): Cart
+     * Adiciona um produto ao carrinho ou atualiza sua quantidade.
+     * @param int $clientId
+     * @param int $productId
+     * @param int $quantity
+     * @return CartItem O item do carrinho adicionado/atualizado.
+     * @throws Exception Se o produto não for encontrado ou estoque insuficiente.
+    */
+    
+     public function addItem(int $clientId, int $productId, int $quantity): CartItem
     {
-        $cart = $this->getCart($dto->clientId); // Obtém ou cria o carrinho
-        $product = $this->productService->getProductById($dto->productId);
-
-        if (!$product) {
-            throw new Exception("Produto com ID {$dto->productId} não encontrado.");
+        if ($quantity <= 0) {
+            throw new InvalidArgumentException("A quantidade deve ser um número positivo.");
         }
 
-        // Calcula a quantidade atual do item no carrinho para verificar o estoque total necessário
-        $existingItemQuantity = 0;
+        $cart = $this->getCart($clientId); // Garante que há um carrinho ativo
+
+        $product = $this->productService->getProductById($productId);
+        if (!$product) {
+            throw new Exception("Produto não encontrado.");
+        }
+
+        // Verifica o estoque disponível (total - reservado)
+        if (!$product->checkStock($quantity)) {
+            throw new Exception("Estoque insuficiente para o produto: " . $product->getName() . ". Disponível: " . $product->checkStock($quantity));
+        }
+
+        $existingItem = null;
         foreach ($cart->getItems() as $item) {
-            if ($item->getProductId() === $dto->productId) {
-                $existingItemQuantity = $item->getQuantity();
+            if ($item->getProductId() === $productId) {
+                $existingItem = $item;
                 break;
             }
         }
 
-        $newTotalQuantityInCart = $existingItemQuantity + $dto->quantity;
-
-        // Verifica o estoque disponível
-        if (!$product->checkStock($newTotalQuantityInCart)) { // checkStock verifica (estoque - reservado)
-            throw new Exception("Estoque insuficiente para o produto {$product->getName()}. Disponível: " . ($product->getStock() - $product->getReserved()));
+        if ($existingItem) {
+            // Atualiza a quantidade do item existente
+            $newQuantity = $existingItem->getQuantity() + $quantity;
+            // Verifica o estoque para a nova quantidade total
+            if (!$product->checkStock($newQuantity)) {
+                throw new Exception("Estoque insuficiente para a quantidade total desejada do produto: " . $product->getName() . ". Disponível: " . $product->checkStock($quantity));
+            }
+            $existingItem->setQuantity($newQuantity);
+            $cart->updateItemQuantity($productId, $newQuantity);
+            $savedItem = $this->cartRepository->save($cart);
+        } else {
+            // Adiciona um novo item ao carrinho
+            $newItem = new CartItem(
+                null,
+                $cart->getId(),
+                $productId,
+                $quantity,
+                $product->getPrice(),
+                $product->getName()
+            );
+            $cart->addItem($newItem); 
+            $savedItem = $this->cartRepository->save($cart); // Salva o item no DB
         }
 
-        // Cria ou atualiza o CartItem
-        $cartItem = new CartItem(
-            $product->getId(),
-            $product->getName(),
-            $product->getPrice(),
-            $dto->quantity
-        );
-        $cart->addItem($cartItem); // O método addItem no Cart lida com atualização de quantidade ou adição
-
-        $this->cartRepository->save($cart); // Persiste as mudanças no carrinho e seus itens
-        $this->logService->log('Cart', 'Item added to cart', $dto->clientId, [
-            'cartId' => $cart->getId(),
-            'productId' => $dto->productId,
-            'quantity' => $dto->quantity
-        ]);
-        return $cart;
+        $this->logService->log('Cart', 'Cart item quantity updated', $clientId, ['cartId' => $cart->getId(), 'productId' => $productId, 'newQuantity' => $quantity]);
+        return $newItem;
     }
 
     /**

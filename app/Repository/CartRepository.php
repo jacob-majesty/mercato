@@ -142,7 +142,7 @@ class CartRepository implements CartRepositoryInterface
      * @param CartItem[] $items Array de objetos CartItem.
      * @return void
      */
-    private function saveCartItems(int $cartId, array $items): void
+    public function saveCartItems(int $cartId, array $items): void
     {
         if (empty($items)) {
             return; // Nada para salvar

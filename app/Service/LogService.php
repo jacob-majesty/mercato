@@ -43,7 +43,7 @@ class LogService
             return $this->logRepository->save($logEntry);
         } catch (Exception $e) {
             // Em um ambiente de produção, você registraria isso em um log de sistema de baixo nível
-            error_log("Erro ao salvar log: " . $e->getMessage() . " - Tipo: {$type}, Ação: {$action}");
+            error_log("Erro ao salvar log: " . $e->getMessage() . " - Tipo: {$type}, Ação: {$action}, User ID: " . ($userId ?? 'NULL'));
             throw new Exception("Falha ao registrar log: " . $e->getMessage());
         }
     }
