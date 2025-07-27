@@ -177,18 +177,33 @@ class ProductRepository implements ProductRepositoryInterface
      */
     private function mapToProduct(array $data): Product
     {
-        // Cast explícito para float e int
+        // Atribui cada valor a uma variável para garantir a ordem e o tipo corretos
+        $id = (int)$data['id'];
+        $name = $data['name'];
+        $price = (float)$data['price'];
+        $category = $data['category'];
+        $description = $data['description'];
+        $imageUrl = $data['image_url'];
+        $stock = (int)$data['stock'];
+        $sellerId = (int)$data['seller_id'];
+        $reserved = (int)($data['reserved'] ?? 0); 
+        $reservedAt = isset($data['reserved_at']) && $data['reserved_at'] !== null ? new DateTime($data['reserved_at']) : null; 
+        $createdAt = new DateTime($data['created_at']); 
+        $updatedAt = new DateTime($data['updated_at']); 
+
         return new Product(
-            (int)$data['id'],
-            $data['name'],
-            (float)$data['price'], // Convertido para float
-            $data['category'],
-            $data['description'],
-            $data['image_url'],
-            (int)$data['stock'], // Convertido para int
-            (int)$data['seller_id'],
-            new DateTime($data['created_at']),
-            new DateTime($data['updated_at'])
+            $id,
+            $name,
+            $price,
+            $category,
+            $description,
+            $imageUrl,
+            $stock,
+            $sellerId,
+            $reserved,
+            $reservedAt,
+            $createdAt,
+            $updatedAt
         );
     }
 }
