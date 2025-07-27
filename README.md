@@ -229,39 +229,15 @@ Implementar três perfis de usuário (Admin, Vendedor, Cliente) para garantir se
   - Vendedores: Gerenciam apenas seus produtos e clientes relacionados
   - Clientes: Acesso limitado ao próprio histórico de compras
 
-- **Segurança Reforçada**
 
-  - Aplicação do princípio do menor privilégio
-  - Redução de superfície de ataque e riscos de dados
-
-- **Lógica de Autorização Simplificada**
-
-  - Middlewares dedicados (authMiddleware, ownerMiddleware, adminMiddleware)
-  - Código modular e de fácil manutenção
-
-- **Base para Escalabilidade**
-
-  - Estrutura pronta para adição de novas funcionalidades por perfil
-  - Suporte a futuras integrações sem refatoração complexa
-
-- **Alinhamento com Regras de Negócio**
-  - Modelagem reflete as reais necessidades da plataforma
-  - Experiência intuitiva para cada tipo de usuário
-
-**Implementação:**
-
-- Definição clara de permissões por role
-- Middlewares específicos para validação de acesso
-- Segregação de visualizações e funcionalidades na interface
-
-## Uso de Interfaces em Services
+## Uso de Interfaces 
 
 ```php
-interface IProductService {
+interface ProductRepositoryInterface {
     public function createProduct(array $data): Product;
 }
 
-class ProductService implements IProductService {
+class ProductRepository implements ProductRepositoryInterface {
     // Implementação...
 }
 ```
@@ -272,38 +248,9 @@ Contrato claro: Define métodos obrigatórios, garantindo coesão.
 
 - Testabilidade: Facilita mocking em testes unitários.
 
-- Polimorfismo: Múltiplas implementações para o mesmo comportamento (ex.: PaymentService vs PayPalService).
-
   **Benefícios**: Manutenibilidade, escalabilidade e aderência a SOLID.
 
-## Camada Repository: Separação de Responsabilidades em MVC
 
-- Separação clara de preocupações (SOLID - SRP):
-
-- Service: Lógica de negócio.
-
-- Repository: Persistência de dados (CRUD).
-
-- Abstração do banco de dados:
-
-- Troque o mecanismo de persistência (MySQL → MongoDB) sem impactar os Services.
-
-- Testabilidade: Mock de repositórios em testes unitários (isolamento da lógica de negócio).
-
-- Reusabilidade: Centraliza consultas complexas para uso em múltiplos Services.
-
-**Benefícios Chave**
-
-- Código mais limpo: Services focam em regras, Repositories em dados.
-- Flexibilidade: Migre de ORM ou banco de dados sem refatorar Services.
-- Manutenção simplificada: Alterações na persistência ficam contidas no Repository.
-
-## Gerador de pdf no Utility
-
-- Instalação do Dompdf: Lembre-se de rodar composer require dompdf/dompdf no seu terminal para que a classe Dompdf esteja disponível.
-- Fontes no Dompdf: Para caracteres especiais e acentuação, é crucial configurar uma fonte que os suporte (DejaVu Sans é uma boa opção padrão para isso no Dompdf).
-- Caminhos (storagePath): Ajuste o storagePath no construtor de PdfGenerator conforme a estrutura do seu projeto.
-  O exemplo **DIR** . '/../../public/uploads/receipts' assume que você tem uma pasta public/uploads/receipts acessível via web.
 
 ## Tecnologias Utilizadas
 
@@ -429,16 +376,9 @@ Instalar o Composer exclusivamente dentro do container Docker para manter o ambi
    docker-compose exec app bash
    ```
 
-2. Instale o Composer:
-
+2. instale as dependências:
    ```sh
-   curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-   ```
-
-3. Saia e instale as dependências:
-   ```sh
-   exit
-   docker-compose exec app composer install
+   composer install
    ```
 
 **Por que fazer isso?**
@@ -470,57 +410,51 @@ git clone https://github.com/jacob-majesty/mercato.git
 ```
 cd mercato
 ```
+3. **Executar com Docker** 
+
+```bash
+docker-compose up -d
+```
+
 
 3. **Suba o servidor local**
 
 Com PHP embutido:
 
 ```
-php -S localhost:8000 -t public
+php -S localhost:80 -t public
 ```
 
-Ou configure em um servidor Apache/Nginx apontando para a pasta `public/`.
 
 4. **Acesse no navegador**
 
 ```
-http://localhost:8000
+http://localhost:80
 ```
 
-### Configurar variáveis de ambiente
-
-Crie um arquivo `.env` com as variáveis necessárias (exemplo: banco, path, etc.)
-
-### Instalar dependências
-
-```bash
-composer install
-```
 
 ### Configurar o banco de dados
 
-- Configure `config/database.php` com os dados do seu banco.
-- Importe o script `.sql` para criar as tabelas (se for MySQL).
-
-### Executar com Docker (opcional)
-
+0. **Copie o arquivo** do host para o container:
 ```bash
-docker-compose up -d
-```
-
-Acesse em: [http://localhost](http://localhost)
-
----
-
-## ▶️ Executando o sistema (sem Docker)
-
-1. Execute o servidor embutido do PHP:
-
+docker cp mercato/database/schema.sql <container_id_or_name>:/tmp/
+````
+1. Acesse o container MySQL:
 ```bash
-php -S localhost:8000 -t public
+docker exec -it <container_id_or_name> sh
 ```
+2. Conecte ao MySQL:
+````
+mysql -u user -p mercato_db
+````
+Digite a senha quando solicitado: secret
 
-2. Acesse: [http://localhost:8000](http://localhost:8000)
+3. No prompt do MySQL, execute:
+````
+SOURCE /tmp/schema.sql;
+USE mercato_db;
+SHOW TABLES;
+````
 
 ---
 
@@ -574,10 +508,6 @@ php -S localhost:8000 -t public
 - [x] Aplicação de cupons no checkout
 - [x] Descontos em tempo real
 
-  - "BEMVINDO15" — Primeira compra (15%)
-  - R\$50 OFF (para produtos acima de R\$500)
-  - Frete grátis acima de R\$200
-
 ### Segurança
 
 - [x] Sanitização e validação dos dados
@@ -596,19 +526,20 @@ php -S localhost:8000 -t public
 ## 💡 Bônus Implementados (Opcional)
 
 - [x] Sistema de logs administrativos
-- [x] Timer visual para reserva de estoque
-- [x] Envio simulado de e-mails
+- [x] Paginação do produtos
+- [x] Testes
 - [x] Feedback visual com Bootstrap (alertas)
 
----
 
 ---
+<img width="961" height="405" alt="image" src="https://github.com/user-attachments/assets/ee91e32b-3ac1-49de-ba69-29360a80b284" />
 
-## 🔗 Repositório
+<img width="960" height="505" alt="image" src="https://github.com/user-attachments/assets/8970f3f7-3e8f-4342-8fd2-b23f2621577d" />
 
-[https://github.com/jacob-majesty/mercato](https://github.com/jacob-majesty/mercato)
+<img width="1407" height="532" alt="image" src="https://github.com/user-attachments/assets/750eadd2-efb9-49f2-b334-d9fdca943bdc" />
 
----
+
+
 
 ## Licença
 
