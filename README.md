@@ -514,6 +514,10 @@ src/views/
 
 <img width="1407" height="532" alt="image" src="https://github.com/user-attachments/assets/750eadd2-efb9-49f2-b334-d9fdca943bdc" />
 
+<img width="1106" height="499" alt="image" src="https://github.com/user-attachments/assets/64a49ca5-bc99-4d31-896a-1fef33746e49" />
+
+
+
 
 
 
