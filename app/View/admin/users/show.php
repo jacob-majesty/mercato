@@ -61,5 +61,5 @@ ob_start();
 $content = ob_get_clean();
 
 // Inclui o layout principal
-require __DIR__ . '/../layout/main.php';
+require __DIR__ . '/../../layout/main.php';
 ?>
