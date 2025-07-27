@@ -110,14 +110,14 @@ class CouponRepository implements CouponRepositoryInterface
      */
     private function hydrateCoupon(array $data): Coupon
     {
-        return new Coupon(
-            $data['id'],
+            return new Coupon(
             $data['code'],
             (float)$data['discount'],
             $data['type'],
+            (bool)$data['isActive'],
+            $data['id'],
             $data['expirationDate'] ? new DateTime($data['expirationDate']) : null,
-            $data['minCartValue'] ? (float)$data['minCartValue'] : null,
-            (bool)$data['isActive']
+            $data['minCartValue'] ? (float)$data['minCartValue'] : null
         );
     }
 }
