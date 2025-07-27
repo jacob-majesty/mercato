@@ -35,7 +35,7 @@ CREATE TABLE products (
     price DECIMAL(10, 2) NOT NULL,
     stock INT NOT NULL DEFAULT 0,
     reserved INT NOT NULL DEFAULT 0, -- Nova coluna para estoque reservado
-    reserved_at TIMESTAMP NULL, -- Nova coluna para data de reserva
+    reserved_at TIMESTAMP NULL, -- Nova coluna para o timestamp da reserva
     image_url VARCHAR(255), -- Caminho para a imagem do produto (ex: /products/book1.jpg)
     category VARCHAR(100),
     seller_id INT, -- ID do usuário vendedor que cadastrou o produto
@@ -60,7 +60,6 @@ CREATE TABLE cart_items (
     cart_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
-    product_name VARCHAR(255) NOT NULL,
     unit_price DECIMAL(10, 2) NOT NULL, -- CORRIGIDO: Adicionada a coluna unit_price
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
@@ -117,7 +116,7 @@ CREATE TABLE logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     type VARCHAR(50) NOT NULL, -- Ex: 'Auth', 'Product', 'Order', 'Error'
     action VARCHAR(255) NOT NULL, -- Descrição da ação
-    user_id INT NULL ON DELETE SET NULL, -- ID do usuário que realizou a ação (pode ser NULL para ações do sistema/erros)
+    user_id INT NULL, -- ID do usuário que realizou a ação (pode ser NULL para ações do sistema/erros)
     details JSON NULL, -- Detalhes adicionais em formato JSON (ex: { "orderId": 123, "newStatus": "SHIPPED" })
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
