@@ -117,7 +117,7 @@ CREATE TABLE logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     type VARCHAR(50) NOT NULL, -- Ex: 'Auth', 'Product', 'Order', 'Error'
     action VARCHAR(255) NOT NULL, -- Descrição da ação
-    user_id INT NULL, -- ID do usuário que realizou a ação (pode ser NULL para ações do sistema/erros)
+    user_id INT NULL ON DELETE SET NULL, -- ID do usuário que realizou a ação (pode ser NULL para ações do sistema/erros)
     details JSON NULL, -- Detalhes adicionais em formato JSON (ex: { "orderId": 123, "newStatus": "SHIPPED" })
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
