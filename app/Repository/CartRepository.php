@@ -143,21 +143,23 @@ class CartRepository implements CartRepositoryInterface
      * @param CartItem[] $items Array de objetos CartItem.
      * @return void
      */
+   
     public function saveCartItems(int $cartId, array $items): void
     {
         if (empty($items)) {
-            return; // Nada para salvar
+            return;
         }
 
-        $sql = "INSERT INTO cart_items (cart_id, product_id, product_name, unit_price, quantity)
-                VALUES (:cartId, :productId, :productName, :unitPrice, :quantity)";
+        // Removido 'product_name' da lista de colunas
+        $sql = "INSERT INTO cart_items (cart_id, product_id, unit_price, quantity)
+                VALUES (:cartId, :productId, :unitPrice, :quantity)";
         $stmt = $this->pdo->prepare($sql);
 
         foreach ($items as $item) {
             $stmt->bindValue(':cartId', $cartId, PDO::PARAM_INT);
             $stmt->bindValue(':productId', $item->getProductId(), PDO::PARAM_INT);
-            $stmt->bindValue(':productName', $item->getProductName());
-            $stmt->bindValue(':unitPrice', $item->getUnitPrice(), PDO::PARAM_STR); // Use STR para floats no bindValue
+            // Removida a linha de bind para ':productName'
+            $stmt->bindValue(':unitPrice', $item->getUnitPrice(), PDO::PARAM_STR);
             $stmt->bindValue(':quantity', $item->getQuantity(), PDO::PARAM_INT);
             $stmt->execute();
         }
