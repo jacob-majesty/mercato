@@ -1,6 +1,6 @@
 # Mercato
 
-**Mercato** é um sistema simples e funcional de **compra e venda de ingressos ou produtos**, com controle de usuários, clientes e estoque. O projeto foi desenvolvido com foco em simplicidade, organização e boas práticas de desenvolvimento backend em **PHP puro**, utilizando **MySQL** como banco de dados e **Bootstrap** no frontend para uma interface responsiva.
+**Mercato** é um sistema simples e funcional de **compra e venda de produtos**, com controle de usuários, clientes e estoque. O projeto foi desenvolvido com foco em simplicidade, organização e boas práticas de desenvolvimento backend em **PHP puro**, utilizando **MySQL** como banco de dados e **Bootstrap** no frontend para uma interface responsiva.
 
 [**Enunciado do projeto**](https://github.com/jacob-majesty/mercato/blob/main/ENUNCIADO_MERCATO.md)
 
@@ -229,38 +229,77 @@ Implementar três perfis de usuário (Admin, Vendedor, Cliente) para garantir se
   - Vendedores: Gerenciam apenas seus produtos e clientes relacionados
   - Clientes: Acesso limitado ao próprio histórico de compras
 
-# Teste do Sistema - Mercato
+# Instruções para rodar o projeto
+0. **Clone o repositório**
 
-## Credenciais de acesso
+```
+git clone https://github.com/jacob-majesty/mercato.git
+```
+
+1. **Acesse a pasta do projeto**
+
+```
+cd mercato
+```
+2. **Executar com Docker** 
+
+```bash
+docker-compose up -d
+```
+3. **Instalação do Composer no Container**
+
+**Objetivo:**  
+Instalar o Composer exclusivamente dentro do container Docker para manter o ambiente de desenvolvimento isolado e consistente.
+
+**Passos:**
+
+a. Acesse o container:
+
+   ```sh
+   docker-compose exec <php_container_id> bash ou docker-compose exec <php_container_id> sh
+   ```
+
+b. instale as dependências:
+   ```sh
+   composer install
+   ```
+4. **Acesse o sistema no navegador**
+
+```
+http://localhost:80
+```
+
+### Teste do Sistema - Mercato
+
+## Credenciais de acesso (Logar com credenciais)
 - **Admin:** `admin@mercato.com` | Senha: `password123` (hash)
 - **Vendedor:** `seller@mercato.com` | Senha: `password123` (hash)
 - **Cliente:** `client@mercato.com` | Senha: `password123` (hash)
 
-## Instruções rápidas
-1. Acessar sistema
-2. Logar com credenciais acima
-3. Validar funções por perfil
+<!--
+### Configurar o banco de dados
 
-
-## Uso de Interfaces 
-
-```php
-interface ProductRepositoryInterface {
-    public function createProduct(array $data): Product;
-}
-
-class ProductRepository implements ProductRepositoryInterface {
-    // Implementação...
-}
+0. **Copie o arquivo** do host para o container:
+```bash
+docker cp mercato/database/schema.sql <container_id_or_name>:/tmp/
+````
+1. Acesse o container MySQL:
+```bash
+docker exec -it <container_id_or_name> sh
 ```
+2. Conecte ao MySQL:
+````
+mysql -u user -p mercato_db
+````
+Digite a senha quando solicitado: secret
 
-Contrato claro: Define métodos obrigatórios, garantindo coesão.
-
-- Desacoplamento: Permite trocar implementações sem afetar dependentes (ex.: DatabaseService → APIService).
-
-- Testabilidade: Facilita mocking em testes unitários.
-
-  **Benefícios**: Manutenibilidade, escalabilidade e aderência a SOLID.
+3. No prompt do MySQL, execute:
+````
+SOURCE /tmp/schema.sql;
+USE mercato_db;
+SHOW TABLES;
+````
+-->
 
 
 
@@ -285,13 +324,34 @@ Contrato claro: Define métodos obrigatórios, garantindo coesão.
 
 - Docker Compose com PHP + MySQL + Nginx
 
+## Uso de Interfaces 
+
+```php
+interface ProductRepositoryInterface {
+    public function createProduct(array $data): Product;
+}
+
+class ProductRepository implements ProductRepositoryInterface {
+    // Implementação...
+}
+```
+
+Contrato claro: Define métodos obrigatórios, garantindo coesão.
+
+- Desacoplamento: Permite trocar implementações sem afetar dependentes 
+
+- Testabilidade: Facilita mocking em testes unitários.
+
+  **Benefícios**: Manutenibilidade, escalabilidade e aderência a SOLID.
+
+
 ```
 mercato/
 ├── app/
 │   ├── Controller/           # Lógica de controle e rotas (ex: ProdutoController.php)
 │   ├── Core/                 # Gerenciar o sistema de rotas
 │   ├── Model/                # Modelos de dados (ex: Produto.php, Cliente.php)
-│   ├── Interfaces/           # Definição do "contrato" que as classes do Service e Repository devem seguir
+│   ├── Interfaces/           # Definição do "contrato" que as classes do Repository devem seguir
 │   ├── Service/              # Regras de negócio (ex: CompraService.php)
 │   ├── Repository            # Camada de persistência de dados
 │   ├── DTO/                  # Objetos de Transferência de Dados (ex: ProdutoDTO.php)
@@ -372,100 +432,6 @@ src/views/
 │   ├── 404.php             # Página não encontrada
 │   └── 500.php             # Erro interno
 └── home.php                # Página inicial
-
-````
-
-### **Passo 3: Instalação do Composer no Container**
-
-**Objetivo:**  
-Instalar o Composer exclusivamente dentro do container Docker para manter o ambiente de desenvolvimento isolado e consistente.
-
-**Passos:**
-
-1. Acesse o container:
-
-   ```sh
-   docker-compose exec app bash
-   ```
-
-2. instale as dependências:
-   ```sh
-   composer install
-   ```
-
-**Por que fazer isso?**
-
-- Elimina a necessidade de instalar PHP/Composer no host.
-- Garante consistência entre ambientes (desenvolvimento, testes, produção).
-- Isola as dependências do projeto (`vendor/`) dentro do container.
-
-**Observações:**
-
-- O diretório `vendor/` é recriado automaticamente ao rodar `composer install` no container.
-- Para adicionar dependências:
-  ```sh
-  docker-compose exec app composer require pacote/nome
-  ```
-
-Esta abordagem mantém o host limpo e o projeto portável.
-
-## Como Rodar o Projeto
-
-1. **Clone o repositório**
-
-```
-git clone https://github.com/jacob-majesty/mercato.git
-```
-
-2. **Acesse a pasta do projeto**
-
-```
-cd mercato
-```
-3. **Executar com Docker** 
-
-```bash
-docker-compose up -d
-```
-
-
-3. **Suba o servidor local**
-
-Com PHP embutido:
-
-```
-php -S localhost:80 -t public
-```
-
-
-4. **Acesse no navegador**
-
-```
-http://localhost:80
-```
-
-
-### Configurar o banco de dados
-
-0. **Copie o arquivo** do host para o container:
-```bash
-docker cp mercato/database/schema.sql <container_id_or_name>:/tmp/
-````
-1. Acesse o container MySQL:
-```bash
-docker exec -it <container_id_or_name> sh
-```
-2. Conecte ao MySQL:
-````
-mysql -u user -p mercato_db
-````
-Digite a senha quando solicitado: secret
-
-3. No prompt do MySQL, execute:
-````
-SOURCE /tmp/schema.sql;
-USE mercato_db;
-SHOW TABLES;
 ````
 
 ---
@@ -486,7 +452,6 @@ SHOW TABLES;
 - [x] Detalhes do produto (sem compra)
 - [x] Carrinho com `$_SESSION['carrinho']`
 - [x] Cadastro e login de clientes
-- [x] Recuperação de senha por e-mail
 
 ### Autenticação e Sessão
 
@@ -516,7 +481,6 @@ SHOW TABLES;
 
 ### Cupons e Descontos
 
-- [x] Estrutura de cupons com usos restantes
 - [x] Aplicação de cupons no checkout
 - [x] Descontos em tempo real
 
