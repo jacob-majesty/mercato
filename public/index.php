@@ -30,6 +30,7 @@ use App\Middleware\AuthMiddleware;
 use App\Middleware\AdminMiddleware;
 use App\Middleware\SellerMiddleware;
 use App\Middleware\GuestMiddleware;
+use App\Middleware\ClientMiddleware;
 
 // Importa os Repositórios que serão instanciados diretamente.
 use App\Repository\UserRepository;
@@ -103,6 +104,7 @@ $router->middleware('auth', AuthMiddleware::class);
 $router->middleware('admin', AdminMiddleware::class);
 $router->middleware('seller', SellerMiddleware::class);
 $router->middleware('guest', GuestMiddleware::class);
+$router->middleware('client', ClientMiddleware::class);
 
 // --------------------------------------------------------------------
 // Define as rotas da aplicação
