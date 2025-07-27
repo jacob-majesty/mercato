@@ -167,31 +167,32 @@ class OrderService
         return $this->orderRepository->getOrdersByClientId($clientId);
     }
 
-     /**
-     * Gera um comprovante de pedido em PDF.
-     * @param int $orderId O ID da ordem.
-     * @param bool $stream Define se o PDF deve ser enviado diretamente para o navegador (true) ou retornado como string (false).
-     * @return string|void Retorna o conteúdo binário do PDF se $stream for false, caso contrário, envia para o navegador e encerra a execução.
-     * @throws Exception Se a ordem não for encontrada ou houver erro na geração.
+    /**
+     * Gera o recibo de um pedido em PDF.
+     * @param int $orderId O ID do pedido.
+     * @param bool $stream Define se o PDF será enviado diretamente ao navegador ou retornado como string.
+     * @return string|null O conteúdo do PDF se $stream for false, ou null se for true.
+     * @throws Exception Se o pedido não for encontrado.
      */
     public function generateOrderReceiptPdf(int $orderId, bool $stream = true): ?string
     {
+        // 1. Busca o pedido pelo ID. Se não encontrar, lança uma exceção.
         $order = $this->orderRepository->findById($orderId);
-
         if (!$order) {
             throw new Exception("Ordem com ID {$orderId} não encontrada para gerar comprovante.");
         }
 
+        // 2. Constrói o HTML do recibo.
         $htmlContent = $this->buildReceiptHtml($order);
 
-        // Chame PdfGenerator e passe o parâmetro $stream corretamente
-        if ($stream) {
-            PdfGenerator::generatePdf($htmlContent, "comprovante_pedido_{$orderId}", true);
-            // Se o PDF foi streamado, o script será encerrado por PdfGenerator::generatePdf
-            return null; // Retorna null para satisfazer o tipo de retorno ?string
-        } else {
-            return PdfGenerator::generatePdf($htmlContent, "comprovante_pedido_{$orderId}", false);
-        }
+        // 3. Usa o gerador de PDF.
+        // O gerador de PDF agora lida com o streaming internamente.
+        // Se $stream for true, o conteúdo é enviado e a execução termina.
+        // Se $stream for false, o conteúdo é retornado como string.
+        $pdfContent = PdfGenerator::generatePdf($htmlContent, "comprovante_pedido_{$orderId}", $stream);
+
+        return $pdfContent;
+       
     }
 
     /**

@@ -162,13 +162,6 @@ class ClientService
      * @return Order O objeto Order criado.
      * @throws Exception Se o carrinho estiver vazio, dados inválidos ou falha na criação do pedido.
      */
-    /**
-     * Finaliza o processo de compra, criando um pedido a partir de um DTO.
-     *
-     * @param OrderCreateDTO $orderDTO O DTO contendo todos os dados necessários para criar o pedido.
-     * @return Order O objeto Order criado.
-     * @throws Exception Se o carrinho estiver vazio, estoque insuficiente ou falha na criação do pedido.
-     */
     public function checkout(OrderCreateDTO $orderDTO): Order
     {
         try {
@@ -272,19 +265,21 @@ class ClientService
     }
 
     /**
-     * Gera um comprovante de compra em PDF para uma ordem específica.
-     * @param int $clientId O ID do cliente.
-     * @param int $orderId O ID da ordem.
-     * @return string O caminho para o arquivo PDF gerado ou o conteúdo do PDF.
-     * @throws Exception Se o cliente ou a ordem não for encontrada, ou a ordem não pertencer ao cliente.
+     * Gera o recibo de um pedido específico de um cliente.
+     * @param int $clientId O ID do cliente logado.
+     * @param int $orderId O ID do pedido a ser gerado.
+     * @return string O conteúdo do PDF como string.
+     * @throws Exception Se o cliente não for encontrado, o pedido não for encontrado ou não pertencer ao cliente.
      */
     public function generateReceipt(int $clientId, int $orderId): string
     {
+        // 1. Verifica se o cliente existe.
         $client = $this->clientRepository->findById($clientId);
         if (!$client) {
             throw new Exception("Cliente não encontrado.");
         }
 
+        // 2. Busca o pedido e verifica se ele existe e pertence ao cliente.
         $order = $this->orderRepository->findById($orderId);
         if (!$order) {
             throw new Exception("Pedido não encontrado.");
@@ -294,9 +289,15 @@ class ClientService
             throw new Exception("O pedido não pertence a este cliente.");
         }
 
-        // Assumindo que OrderService tem generateOrderReceiptPdf
-        // E que ele retorna o conteúdo do PDF ou stream.
-        return $this->orderService->generateOrderReceiptPdf($orderId, false); // Retorna o conteúdo como string
+        // 3. Delega a geração do PDF ao OrderService, solicitando o retorno como string.
+        $pdfContent = $this->orderService->generateOrderReceiptPdf($orderId, false);
+
+        // 4. Garante que o conteúdo do PDF foi retornado.
+        if (is_null($pdfContent)) {
+            throw new Exception("Ocorreu um erro ao gerar o conteúdo do PDF.");
+        }
+        
+        return $pdfContent;
     }
 
     /**
