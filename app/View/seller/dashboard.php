@@ -11,7 +11,7 @@ ob_start();
     <div class="col-md-10 col-lg-9">
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white text-center">
-                <h4 class="mb-0"><i class="fas fa-chart-line"></i> Dashboard do Vendedor</h4>
+                <h4 class="mb-0"><i class="fas fa-chart-line"></i> Mercato - Dashboard do Vendedor</h4>
             </div>
             <div class="card-body p-4">
                 <h5 class="mb-4">Bem-vindo, Vendedor ID: <?= htmlspecialchars($sellerId ?? 'N/A') ?></h5>

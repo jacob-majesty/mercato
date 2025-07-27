@@ -35,7 +35,6 @@ ob_start();
                                         <h5 class="card-title"><?= htmlspecialchars($product->getName()) ?></h5>
                                         <p class="card-text text-primary fw-bold">R$ <?= number_format($product->getPrice(), 2, ',', '.') ?></p>
                                         <p class="card-text text-muted">Estoque: <?= htmlspecialchars($product->getStock()) ?></p>
-                                        <a href="/products/<?= htmlspecialchars($product->getId()) ?>" class="btn btn-primary btn-sm">Ver Detalhes</a>
                                         <button class="btn btn-success btn-sm mt-2 add-to-cart-btn" data-product-id="<?= htmlspecialchars($product->getId()) ?>">
                                             <i class="fas fa-cart-plus"></i> Adicionar ao Carrinho
                                         </button>

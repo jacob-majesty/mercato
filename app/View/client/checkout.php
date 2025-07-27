@@ -1,4 +1,5 @@
 <?php
+// app/View/client/checkout.php
 
 // Define o título da página
 $title = 'Finalizar Compra - Mercato';
@@ -139,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const finalTotalAmountSpan = document.getElementById('final-total-amount');
     const couponDiscountRow = document.getElementById('coupon-discount-row');
     const couponDiscountAmountSpan = document.getElementById('coupon-discount-amount');
+    const checkoutForm = document.getElementById('checkoutForm'); // Obtém o formulário
 
     // Função para aplicar o cupom (simulação no frontend, a validação real é no backend)
     applyCouponBtn.addEventListener('click', function() {
@@ -188,7 +190,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1000); // Simula um atraso de rede
     });
 
-    // Adicione validações de formulário ou outras interatividades aqui
+    // Intercepta a submissão do formulário para enviar via Fetch API (JSON)
+    checkoutForm.addEventListener('submit', function(event) {
+        event.preventDefault(); // Impede a submissão padrão do formulário
+
+        const formData = new FormData(checkoutForm);
+        const jsonData = {};
+        formData.forEach((value, key) => {
+            jsonData[key] = value;
+        });
+
+        // Exibe uma mensagem de carregamento ou desabilita o botão
+        const submitButton = checkoutForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
+
+        fetch(checkoutForm.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json' // Indica que esperamos uma resposta JSON
+            },
+            body: JSON.stringify(jsonData)
+        })
+        .then(response => {
+            // Verifica se a resposta é JSON antes de tentar fazer parse
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                return response.json().then(data => ({ status: response.status, body: data }));
+            } else {
+                // Se não for JSON, lê como texto e lança um erro
+                return response.text().then(text => {
+                    throw new Error(`Resposta inesperada do servidor (não JSON): ${text}`);
+                });
+            }
+        })
+        .then(({ status, body }) => {
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pedido';
+
+            if (status >= 200 && status < 300) { // Sucesso (2xx)
+                alert(body.message || 'Pedido realizado com sucesso!');
+                window.location.href = '/orders'; // Redireciona para o histórico de pedidos
+            } else { // Erro (4xx ou 5xx)
+                alert(body.message || 'Ocorreu um erro ao processar seu pedido.');
+                // Opcional: exibir o erro em uma div específica no formulário
+            }
+        })
+        .catch(error => {
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pedido';
+            console.error('Erro na requisição de checkout:', error);
+            alert('Ocorreu um erro ao comunicar com o servidor. Por favor, tente novamente.');
+        });
+    });
 });
 </script>
 
@@ -197,6 +252,5 @@ document.addEventListener('DOMContentLoaded', function() {
 $content = ob_get_clean();
 
 // Inclui o layout principal
-//require __DIR__ . '/../layout/main.php';
 require __DIR__ . '/../layout/main.php';
 ?>

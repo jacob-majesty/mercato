@@ -11,7 +11,7 @@ ob_start();
     <div class="col-md-10 col-lg-9">
         <div class="card shadow-sm">
             <div class="card-header bg-danger text-white text-center">
-                <h4 class="mb-0"><i class="fas fa-cogs"></i> Dashboard do Administrador</h4>
+                <h4 class="mb-0"><i class="fas fa-cogs"></i> Mercato - Dashboard do Administrador</h4>
             </div>
             <div class="card-body p-4">
                 <h5 class="mb-4">Bem-vindo, Administrador!</h5>
