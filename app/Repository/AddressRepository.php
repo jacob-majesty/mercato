@@ -70,22 +70,22 @@ class AddressRepository
      * @param array $data
      * @return Address
      */
-    public function mapToAddress(array $data): Address
+    private function mapToAddress(array $data): Address
     {
-        // Mapeia os dados do banco de dados para o objeto Address.
-        // Garante que 'created_at' e 'updated_at' sejam tratados como DateTime.
+        // A ordem dos argumentos no construtor deve ser:
+        // id, street, number, complement, neighborhood, city, state, zip_code, country, created_at, updated_at
         return new Address(
-            (int)$data['id'],
+            $data['id'],
             $data['street'],
             $data['number'],
-            $data['complement'],
+            $data['complement'] ?? null,
             $data['neighborhood'],
             $data['city'],
             $data['state'],
             $data['zip_code'],
             $data['country'],
             new DateTime($data['created_at']),
-            isset($data['updated_at']) ? new DateTime($data['updated_at']) : null
+            $data['updated_at'] ? new DateTime($data['updated_at']) : null
         );
     }
 }

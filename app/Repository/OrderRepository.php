@@ -185,9 +185,6 @@ class OrderRepository implements OrderRepositoryInterface
     }
 
 
-
-
-
      /**
      * Mapeia um array de dados do banco de dados para um objeto Order.
      * @param array $data
@@ -195,37 +192,23 @@ class OrderRepository implements OrderRepositoryInterface
      */
     public function hydrateOrder(array $data): Order
     {
-        // Mapear o objeto Address primeiro
-        $addressData = [
-            'id' => (int)$data['address_id'],
-            'street' => $data['street'],
-            'number' => $data['number'],
-            'complement' => $data['complement'],
-            'neighborhood' => $data['neighborhood'],
-            'city' => $data['city'],
-            'state' => $data['state'],
-            'zip_code' => $data['zip_code'],
-            'country' => $data['country'],
-            'created_at' => $data['address_created_at'],
-            'updated_at' => $data['address_updated_at']
-        ];
-        $address = $this->addressRepository->mapToAddress($addressData); // Reutiliza o método de mapeamento do AddressRepository
-
-        // Carregar os itens da ordem
-        $items = $this->findOrderItemsByOrderId((int)$data['id']);
+        $address = $this->addressRepository->findById($data['address_id']);
+        $items = $this->findOrderItemsByOrderId($data['id']);
 
         return new Order(
             (int)$data['id'],
             (int)$data['client_id'],
             $data['status'],
-            new DateTime($data['order_date']),
+            // Verifica se o valor não é null antes de criar o objeto DateTime para evitar o aviso de Deprecated.
+            $data['order_date'] ? new DateTime($data['order_date']) : null,
             (float)$data['total_amount'],
             $data['payment_method'],
             $address,
             $items,
             $data['coupon_code'],
-            (float)$data['discount_amount'], // Mapeia o discount_amount
-            new DateTime($data['order_created_at']),
+            (float)$data['discount_amount'],
+            //  Verifica se o valor não é null antes de criar o objeto DateTime.
+            $data['order_created_at'] ? new DateTime($data['order_created_at']) : null,
             isset($data['order_updated_at']) ? new DateTime($data['order_updated_at']) : null
         );
     }
