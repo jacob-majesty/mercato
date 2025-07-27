@@ -20,8 +20,6 @@ interface OrderRepositoryInterface
      */
     public function getOrdersByClientId(int $clientId): array;
 
-    public function saveAddress(Address $address): int;
-    public function updateAddress(Address $address): bool;
     public function hydrateOrder(array $orderData): Order;
     public function findOrderItemsByOrderId(int $orderId): array;
 }

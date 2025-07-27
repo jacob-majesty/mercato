@@ -29,28 +29,31 @@ class OrderRepository implements OrderRepositoryInterface
         $this->addressRepository = $addressRepository;
     }
 
+       
     public function save(Order $order): Order
     {
         $this->pdo->beginTransaction();
         try {
-            // 1. Salvar ou obter ID do Endereço
-            $addressId = $this->saveAddress($order->getDeliveryAddress());
-            $order->getDeliveryAddress()->setId($addressId);
+            // 1. Salvar ou obter ID do Endereço delegando ao AddressRepository
+            $address = $this->addressRepository->save($order->getDeliveryAddress());
+            $order->setDeliveryAddress($address);
 
             // 2. Salvar o Pedido
-            // Adicionado 'coupon_code' na query de INSERT
             $sql = "INSERT INTO orders (client_id, status, order_date, total_amount, payment_method, address_id, coupon_code, discount_amount, created_at, updated_at) VALUES (:client_id, :status, :order_date, :total_amount, :payment_method, :address_id, :coupon_code, :discount_amount, :created_at, :updated_at)";
 
             $stmt = $this->pdo->prepare($sql);
+            $now = (new DateTime())->format('Y-m-d H:i:s');
 
-            $stmt->bindValue(':clientId', $order->getClientId(), PDO::PARAM_INT);
+            $stmt->bindValue(':client_id', $order->getClientId(), PDO::PARAM_INT);
             $stmt->bindValue(':status', $order->getStatus());
-            $stmt->bindValue(':orderDate', $order->getOrderDate()->format('Y-m-d H:i:s'));
-            $stmt->bindValue(':totalAmount', $order->getTotalAmount());
-            $stmt->bindValue(':paymentMethod', $order->getPaymentMethod());
-            $stmt->bindValue(':couponCode', $order->getCouponCode()); // Novo bindValue
-            $stmt->bindValue(':discountAmount', $order->getDiscountAmount());
-            $stmt->bindValue(':addressId', $order->getDeliveryAddress()->getId(), PDO::PARAM_INT);
+            $stmt->bindValue(':order_date', $order->getOrderDate()->format('Y-m-d H:i:s'));
+            $stmt->bindValue(':total_amount', $order->getTotalAmount());
+            $stmt->bindValue(':payment_method', $order->getPaymentMethod());
+            $stmt->bindValue(':address_id', $order->getDeliveryAddress()->getId(), PDO::PARAM_INT);
+            $stmt->bindValue(':coupon_code', $order->getCouponCode());
+            $stmt->bindValue(':discount_amount', $order->getDiscountAmount());
+            $stmt->bindValue(':created_at', $now);
+            $stmt->bindValue(':updated_at', $now);
 
             $stmt->execute();
             $order->setId((int)$this->pdo->lastInsertId());
@@ -110,29 +113,26 @@ class OrderRepository implements OrderRepositoryInterface
         return $orders;
     }
 
+    
     public function update(Order $order): bool
     {
         $this->pdo->beginTransaction();
         try {
-            if ($order->getDeliveryAddress()->getId()) {
-                $this->updateAddress($order->getDeliveryAddress());
-            } else {
-                $addressId = $this->saveAddress($order->getDeliveryAddress());
-                $order->getDeliveryAddress()->setId($addressId);
-            }
+            // Atualiza o endereço delegando ao AddressRepository
+            $this->addressRepository->save($order->getDeliveryAddress());
 
-            // Adicionado 'coupon_code' na query de UPDATE
             $sql = "UPDATE orders SET status = :status, total_amount = :total_amount, payment_method = :payment_method, address_id = :address_id, coupon_code = :coupon_code, discount_amount = :discount_amount, updated_at = :updated_at WHERE id = :id";
 
             $stmt = $this->pdo->prepare($sql);
+            $now = (new DateTime())->format('Y-m-d H:i:s');
 
-            $stmt->bindValue(':clientId', $order->getClientId(), PDO::PARAM_INT);
             $stmt->bindValue(':status', $order->getStatus());
-            $stmt->bindValue(':orderDate', $order->getOrderDate()->format('Y-m-d H:i:s'));
-            $stmt->bindValue(':totalAmount', $order->getTotalAmount());
-            $stmt->bindValue(':paymentMethod', $order->getPaymentMethod());
-            $stmt->bindValue(':couponCode', $order->getCouponCode()); // Novo bindValue
-            $stmt->bindValue(':addressId', $order->getDeliveryAddress()->getId(), PDO::PARAM_INT);
+            $stmt->bindValue(':total_amount', $order->getTotalAmount());
+            $stmt->bindValue(':payment_method', $order->getPaymentMethod());
+            $stmt->bindValue(':address_id', $order->getDeliveryAddress()->getId(), PDO::PARAM_INT);
+            $stmt->bindValue(':coupon_code', $order->getCouponCode());
+            $stmt->bindValue(':discount_amount', $order->getDiscountAmount());
+            $stmt->bindValue(':updated_at', $now);
             $stmt->bindValue(':id', $order->getId(), PDO::PARAM_INT);
 
             $result = $stmt->execute();
@@ -184,44 +184,9 @@ class OrderRepository implements OrderRepositoryInterface
         return $orders;
     }
 
-    public function saveAddress(Address $address): int
-    {
-        if ($address->getId()) {
-            $this->updateAddress($address);
-            return $address->getId();
-        }
 
-        $sql = "INSERT INTO addresses (street, number, complement, state, country, city, zip_code) VALUES (:street, :number, :complement, :state, :country, :city, :zip_code)";
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':street', $address->getStreet());
-        $stmt->bindValue(':number', $address->getNumber(), PDO::PARAM_INT);
-        $stmt->bindValue(':complement', $address->getComplement());
-        $stmt->bindValue(':state', $address->getState());
-        $stmt->bindValue(':country', $address->getCountry());
-        $stmt->bindValue(':city', $address->getCity());
-        $stmt->bindValue(':zipCode', $address->getZipCode());
-        $stmt->execute();
-        return (int)$this->pdo->lastInsertId();
-    }
 
-    public function updateAddress(Address $address): bool
-    {
-        if (!$address->getId()) {
-            throw new Exception("Não é possível atualizar um endereço sem ID.");
-        }
-        $sql = "UPDATE addresses SET street = :street, number = :number, complement = :complement, state = :state, country = :country, city = :city, zipCode = :zip_code WHERE id = :id";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':street', $address->getStreet());
-        $stmt->bindValue(':number', $address->getNumber(), PDO::PARAM_INT);
-        $stmt->bindValue(':complement', $address->getComplement());
-        $stmt->bindValue(':state', $address->getState());
-        $stmt->bindValue(':country', $address->getCountry());
-        $stmt->bindValue(':city', $address->getCity());
-        $stmt->bindValue(':zipCode', $address->getZipCode());
-        $stmt->bindValue(':id', $address->getId(), PDO::PARAM_INT);
-        return $stmt->execute();
-    }
 
      /**
      * Mapeia um array de dados do banco de dados para um objeto Order.
