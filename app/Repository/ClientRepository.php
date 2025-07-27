@@ -98,28 +98,20 @@ class ClientRepository implements ClientRepositoryInterface
      */
     private function mapToClient(array $data): Client
     {
-        // Assinatura do construtor de Client (que chama o de User):
-        // public function __construct(
-        //     string $email,
-        //     string $firstName,
-        //     string $lastName,
-        //     string $password, // Este é o pswd hashado
-        //     ?int $id = null,
-        //     ?string $role = 'client',
-        //     ?DateTime $createdAt = null,
-        //     ?DateTime $updatedAt = null
-        // )
+        //  Garante que 'id' é um int ou null, e que 'role' tem um fallback
+        $id = isset($data['id']) ? (int)$data['id'] : null;
+        $createdAt = isset($data['created_at']) ? new DateTime($data['created_at']) : null;
+        $updatedAt = isset($data['updated_at']) ? new DateTime($data['updated_at']) : null;
 
-        // CORRIGIDO: Passando os argumentos na ordem correta para o construtor do Client
         return new Client(
             $data['email'],
             $data['first_name'],
             $data['last_name'],
-            $data['pswd'], // Argumento 4: senha (pswd)
-            isset($data['id']) ? (int)$data['id'] : null, // Argumento 5: id
-            $data['role'] ?? 'client', // Argumento 6: role
-            new DateTime($data['created_at']), // Argumento 7: createdAt
-            isset($data['updated_at']) ? new DateTime($data['updated_at']) : null // Argumento 8: updatedAt
+            $data['pswd'],
+            $id, // Passa o ID como o quinto argumento (para o construtor de Client)
+            $data['role'] ?? 'client', // Garante que role seja string, com fallback
+            $createdAt,
+            $updatedAt
         );
     }
 }

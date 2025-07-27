@@ -63,13 +63,15 @@ class ClientService
         $hashedPassword = password_hash($clientDTO->password, PASSWORD_BCRYPT);
 
         // 4. Criar o objeto Client Model
-        $client = new Client(
+       $client = new Client(
             $clientDTO->email,
             $clientDTO->firstName,
             $clientDTO->lastName,
-            $hashedPassword,
-            null, // ID será gerado pelo banco de dados
-            new DateTime()
+            $hashedPassword, // Senha já hashada
+            null, // ID (será definido após salvar no DB)
+            'client', // Role fixo como 'client'
+            new DateTime(), // createdAt
+            null // updatedAt
         );
 
         // 5. Salvar o cliente via Repository
