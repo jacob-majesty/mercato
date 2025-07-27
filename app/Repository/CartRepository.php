@@ -115,24 +115,25 @@ class CartRepository implements CartRepositoryInterface
      */
     private function findCartItemsByCartId(int $cartId): array
     {
-        $sql = "SELECT product_id, product_name, unit_price, quantity
-                FROM cart_items
-                WHERE cart_id = :cartId";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':cartId', $cartId, PDO::PARAM_INT);
-        $stmt->execute();
-        $itemsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $cartItems = [];
-        foreach ($itemsData as $itemData) {
-            $cartItems[] = new CartItem(
-                (int)$itemData['product_id'],
-                $itemData['product_name'],
-                (float)$itemData['unit_price'],
-                (int)$itemData['quantity']
+       $stmt = $this->pdo->prepare("
+            SELECT ci.id, ci.cart_id, ci.product_id, ci.quantity, ci.unit_price, p.name AS product_name
+            FROM cart_items ci
+            JOIN products p ON ci.product_id = p.id
+            WHERE ci.cart_id = :cart_id
+        ");
+        $stmt->execute(['cart_id' => $cartId]);
+        $items = [];
+        while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $items[] = new CartItem(
+                (int)$data['id'],          // Argumento 1: id
+                (int)$data['cart_id'],     // Argumento 2: cartId (agora um int)
+                (int)$data['product_id'],  // Argumento 3: productId
+                (int)$data['quantity'],    // Argumento 4: quantity
+                (float)$data['unit_price'],// Argumento 5: unitPrice
+                $data['product_name']      // Argumento 6: productName
             );
         }
-        return $cartItems;
+        return $items;
     }
 
     /**
