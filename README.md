@@ -229,6 +229,18 @@ Implementar três perfis de usuário (Admin, Vendedor, Cliente) para garantir se
   - Vendedores: Gerenciam apenas seus produtos e clientes relacionados
   - Clientes: Acesso limitado ao próprio histórico de compras
 
+# Teste do Sistema - Mercato
+
+## Credenciais de acesso
+- **Admin:** `admin@mercato.com` | Senha: `password123` (hash)
+- **Vendedor:** `seller@mercato.com` | Senha: `password123` (hash)
+- **Cliente:** `client@mercato.com` | Senha: `password123` (hash)
+
+## Instruções rápidas
+1. Acessar sistema
+2. Logar com credenciais acima
+3. Validar funções por perfil
+
 
 ## Uso de Interfaces 
 
