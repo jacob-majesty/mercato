@@ -46,7 +46,7 @@ ob_start();
                     </div>
                     <div class="mb-3">
                         <label for="imageUrl" class="form-label">URL da Imagem</label>
-                        <input type="url" class="form-control" id="imageUrl" name="image_url" placeholder="/products/books/exemplo.jpg" value="<?= htmlspecialchars($_POST['image_url'] ?? '') ?>">
+                        <input type="text" class="form-control" id="imageUrl" name="image_url" placeholder="/products/books/exemplo.jpg" value="<?= htmlspecialchars($_POST['image_url'] ?? '') ?>">
                         <div class="form-text">Caminho relativo à pasta `public/`, ex: `/products/books/meu-livro.jpg`</div>
                     </div>
                     <div class="mb-3">
