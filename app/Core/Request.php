@@ -59,13 +59,17 @@ class Request
         $this->routeParams = $params;
     }
 
-    /**
-     * Obtém um parâmetro específico da rota por índice.
-     * Ex: se a rota é /products/{id}, o primeiro parâmetro de rota seria o ID.
+   /**
+     * Obtém um parâmetro específico da rota por chave (nome ou índice numérico).
+     * Ex: se a rota é /products/{id}, o parâmetro pode ser acessado como getRouteParam('id').
+     * Se a rota for /items/1/2 (sem nomes), pode ser acessado como getRouteParam(0) para '1'.
+     * @param string|int $key O nome ou índice do parâmetro da rota.
+     * @param mixed $default O valor padrão a ser retornado se a chave não existir.
+     * @return mixed O valor do parâmetro da rota, ou o valor padrão.
      */
-    public function getRouteParam(int $index, $default = null)
+    public function getRouteParam(string|int $key, $default = null)
     {
-        return $this->routeParams[$index] ?? $default;
+        return $this->routeParams[$key] ?? $default;
     }
 
     /**
