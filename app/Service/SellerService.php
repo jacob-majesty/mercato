@@ -128,23 +128,7 @@ class SellerService
      * @return \App\Model\Product O produto criado.
      * @throws Exception Se o vendedor não for encontrado ou falha na criação.
      */
-    public function addProduct(int $sellerId, array $productData): \App\Model\Product
-    {
-        $seller = $this->getSellerById($sellerId);
-        if (!$seller) {
-            throw new Exception("Vendedor não encontrado para adicionar produto.");
-        }
-        $productDTO = new ProductCreateDTO(
-            $productData['name'],
-            $productData['description'],
-            $productData['price'],
-            $productData['category'],
-            $productData['imageUrl'] ?? null,
-            $productData['stock'] ?? 0,
-            $sellerId
-        );
-        return $this->productService->createProduct($productDTO);
-    }
+    
 
     /**
      * Atualiza um produto de um vendedor, verificando a propriedade.
@@ -154,18 +138,6 @@ class SellerService
      * @return bool True se atualizado, false caso contrário.
      * @throws Exception Se o produto não pertencer ao vendedor ou não for encontrado.
      */
-    public function updateProduct(int $sellerId, int $productId, array $productData): bool
-    {
-        $product = $this->productService->getProductById($productId);
-        if (!$product) {
-            throw new Exception("Produto não encontrado.");
-        }
-        if ($product->getSellerId() !== $sellerId) {
-            throw new Exception("Este produto não pertence ao vendedor.");
-        }
-        $productUpdateDTO = ProductUpdateDTO::fromArray($productData);
-        return $this->productService->updateProduct($productId, $productUpdateDTO);
-    }
 
     /**
      * Deleta um produto de um vendedor, verificando a propriedade.

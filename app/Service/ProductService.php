@@ -52,16 +52,17 @@ class ProductService
      * @return Product
      * @throws Exception Se os dados forem inválidos ou a persistência falhar.
      */
+     /**
+     * Cria um novo produto no sistema.
+     * @param ProductCreateDTO $productDTO Dados para criação do produto.
+     * @return Product O objeto Product recém-criado.
+     * @throws Exception Se a persistência falhar.
+     */
     public function createProduct(ProductCreateDTO $productDTO): Product
     {
-        // 1. Validação do DTO
-        if (empty($productDTO->name) || $productDTO->price <= 0 || empty($productDTO->category) || $productDTO->stock < 0 || $productDTO->sellerId <= 0) {
-            throw new \InvalidArgumentException("Dados inválidos ou incompletos para criar produto.");
-        }
-
-        // 2. Criação do objeto Model a partir do DTO
+        // Cria uma nova instância de Product Model
         $product = new Product(
-            null, // ID será gerado pelo DB
+            null, // ID será gerado pelo banco de dados
             $productDTO->name,
             $productDTO->price,
             $productDTO->category,
@@ -69,12 +70,18 @@ class ProductService
             $productDTO->imageUrl,
             $productDTO->stock,
             $productDTO->sellerId,
-            0, // reserved (inicia com 0)
-            null // reservedAt (inicia como null)
+            0, // reserved
+            null, // reserved_at
+            new DateTime(), // created_at
+            new DateTime() // updated_at
         );
 
-        // 3. Persistência via Repository
-        return $this->productRepository->save($product);
+        try {
+            return $this->productRepository->save($product);
+        } catch (Exception $e) {
+            error_log("ProductService: Erro ao criar produto: " . $e->getMessage());
+            throw new Exception("Falha ao criar produto: " . $e->getMessage());
+        }
     }
 
     /**
@@ -84,14 +91,14 @@ class ProductService
      * @return bool
      * @throws Exception Se o produto não for encontrado ou a atualização falhar.
      */
-    public function updateProduct(int $productId, ProductUpdateDTO $productDTO): bool
+    public function updateProduct(ProductUpdateDTO $productDTO): bool
     {
-        $product = $this->productRepository->findById($productId);
+        $product = $this->productRepository->findById($productDTO->id);
         if (!$product) {
-            throw new Exception("Produto não encontrado.");
+            throw new Exception("Produto com ID {$productDTO->id} não encontrado para atualização.");
         }
 
-        // Aplicar atualizações do DTO ao Model (apenas se o valor não for nulo no DTO)
+        // Aplica as atualizações apenas se os dados estiverem presentes no DTO
         if ($productDTO->name !== null) {
             $product->setName($productDTO->name);
         }
@@ -107,16 +114,17 @@ class ProductService
         if ($productDTO->imageUrl !== null) {
             $product->setImageUrl($productDTO->imageUrl);
         }
-        // Ao atualizar estoque, certifique-se de que o novo estoque não seja menor que o reservado
         if ($productDTO->stock !== null) {
-            if ($productDTO->stock < $product->getReserved()) {
-                throw new Exception("O estoque não pode ser menor que a quantidade reservada.");
-            }
             $product->setStock($productDTO->stock);
         }
+        // O sellerId não deve ser alterado aqui, pois um produto pertence a um vendedor.
 
-        // Persistir as mudanças
-        return $this->productRepository->update($product);
+        try {
+            return $this->productRepository->update($product);
+        } catch (Exception $e) {
+            error_log("ProductService: Erro ao atualizar produto ID {$productDTO->id}: " . $e->getMessage());
+            throw new Exception("Falha ao atualizar produto: " . $e->getMessage());
+        }
     }
 
     public function deleteProduct(int $productId): bool
@@ -142,14 +150,12 @@ class ProductService
         return $product->checkStock($quantity); 
     }
 
-    /**
-     * Reserva uma quantidade de estoque para um produto.
-     * Utiliza o método `reserve` do modelo `Product`, que já inclui a lógica de `reservedAt` para o último item.
-     *
+        /**
+     * Reserva uma quantidade de um produto.
      * @param int $productId O ID do produto.
      * @param int $quantity A quantidade a ser reservada.
-     * @return bool True se a reserva foi bem-sucedida, false caso contrário.
-     * @throws Exception Se o produto não for encontrado.
+     * @return bool True se a reserva foi bem-sucedida.
+     * @throws Exception Se o produto não for encontrado ou estoque insuficiente para reserva.
      */
     public function reserveStock(int $productId, int $quantity): bool
     {
@@ -158,11 +164,12 @@ class ProductService
             throw new Exception("Produto não encontrado para reserva.");
         }
 
-        $success = $product->reserve($quantity); 
-        if ($success) {
-            return $this->productRepository->update($product);
-        }
-        return false; // Não foi possível reservar (estoque insuficiente)
+        // Chama o método 'void' no modelo. Ele lançará uma exceção em caso de falha.
+        // Se não lançar, significa que a reserva foi feita com sucesso no objeto em memória.
+        $product->reserve($quantity); 
+        
+        // Persiste as mudanças no banco de dados. O retorno é o sucesso da operação de persistência.
+        return $this->productRepository->update($product);
     }
 
     /**
