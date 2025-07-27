@@ -100,15 +100,16 @@ class OrderService
         $deliveryAddress = null;
         if ($orderDTO->deliveryAddress) {
             $deliveryAddress = new Address(
-                $orderDTO->deliveryAddress['street'] ?? '',
-                $orderDTO->deliveryAddress['number'] ?? 0,
-                $orderDTO->deliveryAddress['complement'] ?? null,
-                $orderDTO->deliveryAddress['state'] ?? '',
-                $orderDTO->deliveryAddress['country'] ?? '',
-                $orderDTO->deliveryAddress['neighborhood'] ?? '',
-                $orderDTO->deliveryAddress['city'] ?? '',
-                $orderDTO->deliveryAddress['zipCode'] ?? ''
-            );
+            0, // ID deve ser null para um novo endereço
+            $orderDTO->deliveryAddress['street'],
+            $orderDTO->deliveryAddress['number'],
+            $orderDTO->deliveryAddress['complement'] ?? null,
+            $orderDTO->deliveryAddress['neighborhood'],
+            $orderDTO->deliveryAddress['city'],
+            $orderDTO->deliveryAddress['state'],
+            $orderDTO->deliveryAddress['zip_code'], // Este é o zipCode, não o ID
+            $orderDTO->deliveryAddress['country']
+        );
         } else {
             throw new \InvalidArgumentException("Endereço de entrega é obrigatório.");
         }

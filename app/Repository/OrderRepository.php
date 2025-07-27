@@ -8,6 +8,7 @@ use App\Model\Address;
 use PDO;
 use DateTime;
 use Exception;
+use App\Repository\AddressRepository;
 
 use App\Interfaces\OrderRepositoryInterface;
 
@@ -20,10 +21,12 @@ use App\Interfaces\OrderRepositoryInterface;
 class OrderRepository implements OrderRepositoryInterface
 {
     private PDO $pdo;
+    private AddressRepository $addressRepository;
 
-    public function __construct(PDO $pdo)
+    public function __construct(PDO $pdo, AddressRepository $addressRepository)
     {
         $this->pdo = $pdo;
+        $this->addressRepository = $addressRepository;
     }
 
     public function save(Order $order): Order
@@ -36,7 +39,8 @@ class OrderRepository implements OrderRepositoryInterface
 
             // 2. Salvar o Pedido
             // Adicionado 'coupon_code' na query de INSERT
-            $sql = "INSERT INTO orders (client_id, status, order_date, total_amount, payment_method, coupon_code, address_id) VALUES (:clientId, :status, :orderDate, :totalAmount, :paymentMethod, :couponCode, :addressId)";
+            $sql = "INSERT INTO orders (client_id, status, order_date, total_amount, payment_method, address_id, coupon_code, discount_amount, created_at, updated_at) VALUES (:client_id, :status, :order_date, :total_amount, :payment_method, :address_id, :coupon_code, :discount_amount, :created_at, :updated_at)";
+
             $stmt = $this->pdo->prepare($sql);
 
             $stmt->bindValue(':clientId', $order->getClientId(), PDO::PARAM_INT);
@@ -45,6 +49,7 @@ class OrderRepository implements OrderRepositoryInterface
             $stmt->bindValue(':totalAmount', $order->getTotalAmount());
             $stmt->bindValue(':paymentMethod', $order->getPaymentMethod());
             $stmt->bindValue(':couponCode', $order->getCouponCode()); // Novo bindValue
+            $stmt->bindValue(':discountAmount', $order->getDiscountAmount());
             $stmt->bindValue(':addressId', $order->getDeliveryAddress()->getId(), PDO::PARAM_INT);
 
             $stmt->execute();
@@ -117,7 +122,8 @@ class OrderRepository implements OrderRepositoryInterface
             }
 
             // Adicionado 'coupon_code' na query de UPDATE
-            $sql = "UPDATE orders SET client_id = :clientId, status = :status, order_date = :orderDate, total_amount = :totalAmount, payment_method = :paymentMethod, coupon_code = :couponCode, address_id = :addressId WHERE id = :id";
+            $sql = "UPDATE orders SET status = :status, total_amount = :total_amount, payment_method = :payment_method, address_id = :address_id, coupon_code = :coupon_code, discount_amount = :discount_amount, updated_at = :updated_at WHERE id = :id";
+
             $stmt = $this->pdo->prepare($sql);
 
             $stmt->bindValue(':clientId', $order->getClientId(), PDO::PARAM_INT);
@@ -186,6 +192,7 @@ class OrderRepository implements OrderRepositoryInterface
         }
 
         $sql = "INSERT INTO addresses (street, number, complement, state, country, city, zip_code) VALUES (:street, :number, :complement, :state, :country, :city, :zip_code)";
+
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':street', $address->getStreet());
         $stmt->bindValue(':number', $address->getNumber(), PDO::PARAM_INT);
@@ -216,31 +223,45 @@ class OrderRepository implements OrderRepositoryInterface
         return $stmt->execute();
     }
 
-    public function hydrateOrder(array $orderData): Order
+     /**
+     * Mapeia um array de dados do banco de dados para um objeto Order.
+     * @param array $data
+     * @return Order
+     */
+    public function hydrateOrder(array $data): Order
     {
-        $address = new Address(
-            $orderData['address_id'],
-            $orderData['street'],
-            $orderData['number'],
-            $orderData['complement'],
-            $orderData['state'],
-            $orderData['country'],
-            $orderData['city'],
-            $orderData['zipCode']
-        );
+        // Mapear o objeto Address primeiro
+        $addressData = [
+            'id' => (int)$data['address_id'],
+            'street' => $data['street'],
+            'number' => $data['number'],
+            'complement' => $data['complement'],
+            'neighborhood' => $data['neighborhood'],
+            'city' => $data['city'],
+            'state' => $data['state'],
+            'zip_code' => $data['zip_code'],
+            'country' => $data['country'],
+            'created_at' => $data['address_created_at'],
+            'updated_at' => $data['address_updated_at']
+        ];
+        $address = $this->addressRepository->mapToAddress($addressData); // Reutiliza o método de mapeamento do AddressRepository
 
-        $orderItems = $this->findOrderItemsByOrderId($orderData['id']);
+        // Carregar os itens da ordem
+        $items = $this->findOrderItemsByOrderId((int)$data['id']);
 
         return new Order(
-            $orderData['id'],
-            $orderData['client_id'],
-            $orderData['status'],
-            new DateTime($orderData['order_date'] ?? 'now'),
-            (float)$orderData['total_amount'],
-            $orderData['payment_method'],
+            (int)$data['id'],
+            (int)$data['client_id'],
+            $data['status'],
+            new DateTime($data['order_date']),
+            (float)$data['total_amount'],
+            $data['payment_method'],
             $address,
-            $orderItems,
-            $orderData['coupon_code'] ?? null // Novo: Hidrata o código do cupom
+            $items,
+            $data['coupon_code'],
+            (float)$data['discount_amount'], // Mapeia o discount_amount
+            new DateTime($data['order_created_at']),
+            isset($data['order_updated_at']) ? new DateTime($data['order_updated_at']) : null
         );
     }
 
