@@ -29,7 +29,8 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: secret
     volumes:
-      - db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql # Auto-executa schema
+      - /tmp/mercato_mysql:/var/lib/mysql # Dados efêmeros (limpos no down)
     networks:
       - mercato-network
 
