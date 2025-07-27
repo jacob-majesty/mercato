@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS logs;
 DROP TABLE IF EXISTS coupons;
+DROP TABLE IF EXISTS addresses; -- Adicionado para garantir que a tabela de endereços seja dropada também
 
 
 -- Tabela de Usuários
@@ -22,7 +23,8 @@ CREATE TABLE users (
     last_name VARCHAR(255) NOT NULL,
     pswd VARCHAR(255) NOT NULL, -- 'pswd' para evitar conflito com 'password' em alguns sistemas
     role ENUM('client', 'seller', 'admin') NOT NULL DEFAULT 'client',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Adicionado updated_at para consistência
 );
 
 -- Tabela de Produtos
@@ -44,6 +46,7 @@ CREATE TABLE products (
 CREATE TABLE carts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     client_id INT NOT NULL UNIQUE,
+    status ENUM('active', 'completed', 'abandoned') NOT NULL DEFAULT 'active', -- Adicionado status para o carrinho
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE
@@ -55,24 +58,43 @@ CREATE TABLE cart_items (
     cart_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL, -- CORRIGIDO: Adicionada a coluna unit_price
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     UNIQUE (cart_id, product_id) -- Garante que um produto só aparece uma vez no carrinho
 );
 
+-- Tabela de Endereços
+CREATE TABLE addresses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    street VARCHAR(255) NOT NULL,
+    number VARCHAR(50) NOT NULL,
+    complement VARCHAR(255) DEFAULT NULL,
+    neighborhood VARCHAR(255) NOT NULL,
+    city VARCHAR(255) NOT NULL,
+    state VARCHAR(255) NOT NULL,
+    zip_code VARCHAR(20) NOT NULL,
+    country VARCHAR(100) NOT NULL DEFAULT 'Brasil',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Tabela de Pedidos
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     client_id INT NOT NULL,
+    address_id INT NOT NULL, -- Agora é uma chave estrangeira para a tabela addresses
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     total_amount DECIMAL(10, 2) NOT NULL,
     status ENUM('PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED', 'REFUNDED') NOT NULL DEFAULT 'PENDING',
     payment_method VARCHAR(50) NOT NULL,
-    delivery_address JSON, -- Armazena o endereço de entrega como JSON
     coupon_code VARCHAR(50) NULL, -- Código do cupom aplicado
     discount_amount DECIMAL(10, 2) DEFAULT 0.00, -- Valor do desconto aplicado
-    FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (address_id) REFERENCES addresses(id) ON DELETE RESTRICT ON UPDATE CASCADE -- Adiciona a chave estrangeira para addresses
 );
 
 -- Tabela de Itens do Pedido
@@ -112,7 +134,6 @@ CREATE TABLE coupons (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
-
 
 -- Reativa as verificações de chave estrangeira
 SET FOREIGN_KEY_CHECKS = 1;

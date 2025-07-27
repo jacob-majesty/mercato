@@ -73,7 +73,7 @@ class OrderRepository implements OrderRepositoryInterface
     public function findById(int $id): ?Order
     {
         // Adicionado 'o.coupon_code' na query de SELECT
-        $sql = "SELECT o.*, o.coupon_code, a.street, a.number, a.complement, a.state, a.country, a.city, a.zipCode, a.id as address_id
+        $sql = "SELECT o.*, o.coupon_code, a.street, a.number, a.complement, a.state, a.country, a.city, a.zip_code, a.id as address_id
                 FROM orders o
                 JOIN addresses a ON o.address_id = a.id
                 WHERE o.id = :id";
@@ -92,7 +92,7 @@ class OrderRepository implements OrderRepositoryInterface
     public function findAll(): array
     {
         // Adicionado 'o.coupon_code' na query de SELECT
-        $sql = "SELECT o.*, o.coupon_code, a.street, a.number, a.complement, a.state, a.country, a.city, a.zipCode, a.id as address_id
+        $sql = "SELECT o.*, o.coupon_code, a.street, a.number, a.complement, a.state, a.country, a.city, a.zip_code, a.id as address_id
                 FROM orders o
                 JOIN addresses a ON o.address_id = a.id";
         $stmt = $this->pdo->query($sql);
@@ -162,7 +162,7 @@ class OrderRepository implements OrderRepositoryInterface
     public function getOrdersByClientId(int $clientId): array
     {
         // Adicionado 'o.coupon_code' na query de SELECT
-        $sql = "SELECT o.*, o.coupon_code, a.street, a.number, a.complement, a.state, a.country, a.city, a.zipCode, a.id as address_id
+        $sql = "SELECT o.*, o.coupon_code, a.street, a.number, a.complement, a.state, a.country, a.city, a.zip_code, a.id as address_id
                 FROM orders o
                 JOIN addresses a ON o.address_id = a.id
                 WHERE o.client_id = :clientId";
@@ -185,7 +185,7 @@ class OrderRepository implements OrderRepositoryInterface
             return $address->getId();
         }
 
-        $sql = "INSERT INTO addresses (street, number, complement, state, country, city, zipCode) VALUES (:street, :number, :complement, :state, :country, :city, :zipCode)";
+        $sql = "INSERT INTO addresses (street, number, complement, state, country, city, zip_code) VALUES (:street, :number, :complement, :state, :country, :city, :zip_code)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':street', $address->getStreet());
         $stmt->bindValue(':number', $address->getNumber(), PDO::PARAM_INT);
@@ -203,7 +203,7 @@ class OrderRepository implements OrderRepositoryInterface
         if (!$address->getId()) {
             throw new Exception("Não é possível atualizar um endereço sem ID.");
         }
-        $sql = "UPDATE addresses SET street = :street, number = :number, complement = :complement, state = :state, country = :country, city = :city, zipCode = :zipCode WHERE id = :id";
+        $sql = "UPDATE addresses SET street = :street, number = :number, complement = :complement, state = :state, country = :country, city = :city, zipCode = :zip_code WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':street', $address->getStreet());
         $stmt->bindValue(':number', $address->getNumber(), PDO::PARAM_INT);
