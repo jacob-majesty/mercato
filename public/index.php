@@ -1,17 +1,8 @@
 <?php
-// public/index.php
 
-// --------------------------------------------------------------------
-// ATENÇÃO: ESTE ARQUIVO DEVE COMEÇAR COM A TAG PHP E NADA MAIS.
-// NENHUM ESPAÇO EM BRANCO, NENHUMA NOVA LINHA ANTES DESTA TAG.
-// --------------------------------------------------------------------
 
-// Inicia o buffer de saída. Isso deve ser a PRIMEIRA coisa a acontecer
-// para capturar qualquer saída indesejada (incluindo warnings) antes
-// que os cabeçalhos HTTP sejam enviados.
 ob_start();
 
-// Define o nível de relatório de erros.
 // error_reporting(E_ALL); // Para desenvolvimento: mostra todos os erros
 // ini_set('display_errors', 1); // Para desenvolvimento: exibe erros no navegador
 // Para evitar que warnings apareçam no output e causem "headers already sent":
@@ -113,7 +104,7 @@ try {
     if (!class_exists(OrderRepository::class)) {
         throw new Exception("Classe OrderRepository não encontrada.");
     }
-    $orderRepository = new OrderRepository($pdo, $addressRepository);
+    $orderRepository = new OrderRepository($pdo, $addressRepository, $productRepository);
 
 } catch (\Throwable $e) { // Usar \Throwable para garantir captura de Errors e Exceptions
     error_log("Erro fatal ao instanciar repositórios: " . $e->getMessage() . " na linha " . $e->getLine() . " do arquivo " . $e->getFile());
@@ -135,7 +126,7 @@ try {
     $logService = new LogService($logRepository);
     $userService = new UserService($userRepository, $logService);
     $productService = new ProductService($productRepository);
-    $orderService = new OrderService($orderRepository, $productService, $logService, $couponRepository);
+    $orderService = new OrderService($orderRepository, $addressRepository, $productService, $logService, $couponRepository);
     $cartService = new CartService($cartRepository, $productService, $orderService, $logService);
     $clientService = new ClientService($clientRepository, $cartService, $orderService, $logService, $orderRepository);
 } catch (\Throwable $e) { // Usar \Throwable para garantir captura de Errors e Exceptions
