@@ -1,0 +1,317 @@
+<?php
+
+namespace App\Service;
+
+use App\Interfaces\OrderRepositoryInterface;
+use App\Interfaces\CouponRepositoryInterface;
+use App\Repository\AddressRepository;
+use App\Model\Order;
+use App\Model\OrderItem;
+use App\Model\Address;
+use App\DTO\OrderCreateDTO;
+use App\Utility\PdfGenerator;
+use Exception;
+use DateTime;
+
+class OrderService
+{
+    private OrderRepositoryInterface $orderRepository;
+    private AddressRepository $addressRepository;
+    private ProductService $productService;
+    private LogService $logService; // Adicionado LogService
+    private CouponRepositoryInterface $couponRepository; // Adicionado CouponRepository
+
+    // Ordem correta dos argumentos para o construtor
+    public function __construct(
+        OrderRepositoryInterface $orderRepository,
+        AddressRepository $addressRepository,
+        ProductService $productService,
+        LogService $logService, // LogService é o terceiro argumento
+        CouponRepositoryInterface $couponRepository // CouponRepository é o quarto argumento
+    ) {
+        $this->orderRepository = $orderRepository;
+        $this->addressRepository = $addressRepository;
+        $this->productService = $productService;
+        $this->logService = $logService;
+        $this->couponRepository = $couponRepository;
+    }
+    
+    public function createOrder(OrderCreateDTO $orderDTO): Order
+    {
+        if (empty($orderDTO->clientId) || empty($orderDTO->paymentMethod) || empty($orderDTO->cartItems)) {
+            throw new \InvalidArgumentException("Dados inválidos ou incompletos para criar pedido.");
+        }
+
+        $totalAmount = 0.0;
+        $orderItems = [];
+        $appliedCouponCode = null; // Variável para armazenar o código do cupom aplicado
+
+        foreach ($orderDTO->cartItems as $itemData) {
+            $productId = $itemData['productId'] ?? null;
+            $quantity = $itemData['quantity'] ?? null;
+
+            if (!$productId || !$quantity || $quantity <= 0) {
+                throw new \InvalidArgumentException("Item do carrinho inválido: ID do produto ou quantidade ausente/inválida.");
+            }
+
+            $product = $this->productService->getProductById($productId);
+            if (!$product) {
+                throw new Exception("Produto com ID {$productId} não encontrado.");
+            }
+
+            if (!$this->productService->checkProductStock($productId, $quantity)) {
+                throw new Exception("Estoque insuficiente para o produto: {$product->getName()}.");
+            }
+
+            $this->productService->decrementStock($productId, $quantity);
+
+            $orderItem = new OrderItem(
+                null,           // ID (null para novo item)
+                null,           // orderId (null inicialmente, será definido pelo repositório)
+                $productId,     // productId
+                $product->getName(), // productName
+                $quantity,      // quantity
+                $product->getPrice() // unitPrice
+            );
+            $orderItems[] = $orderItem;
+            $totalAmount += $orderItem->getQuantity() * $orderItem->getUnitPrice();
+        }
+
+        if ($orderDTO->couponCode) {
+            $coupon = $this->couponRepository->findByCode($orderDTO->couponCode);
+            if ($coupon) {
+                if ($coupon->isExpired() || !$coupon->isActive() || ($coupon->getMinCartValue() !== null && $totalAmount < $coupon->getMinCartValue())) {
+                    // Cupom inválido ou não aplicável, ignora ou lança exceção
+                    // Para este cenário, não definiremos appliedCouponCode
+                } else {
+                    if ($coupon->getType() === 'percentage') {
+                        $totalAmount -= $totalAmount * $coupon->getDiscount();
+                    } elseif ($coupon->getType() === 'fixed') {
+                        $totalAmount -= $coupon->getDiscount();
+                    }
+                    $totalAmount = max(0, $totalAmount); // Garante que o total não seja negativo
+                    $appliedCouponCode = $coupon->getCode(); // Define o código do cupom aplicado
+                }
+            }
+        }
+
+        $deliveryAddress = null;
+        if ($orderDTO->deliveryAddress) {
+            $deliveryAddress = new Address(
+                0, // id (novo endereço)
+                $orderDTO->clientId, // clientId
+                $orderDTO->deliveryAddress['street'],
+                (string)$orderDTO->deliveryAddress['number'],
+                $orderDTO->deliveryAddress['complement'] ?? '',
+                $orderDTO->deliveryAddress['neighborhood'],
+                $orderDTO->deliveryAddress['city'],
+                $orderDTO->deliveryAddress['state'],
+                $orderDTO->deliveryAddress['zip_code'],
+                $orderDTO->deliveryAddress['country'],
+                $orderDTO->deliveryAddress['recipient'] // recipient
+            );
+        } else {
+            throw new \InvalidArgumentException("Endereço de entrega é obrigatório.");
+        }
+
+        $order = new Order(
+            null,
+            $orderDTO->clientId,
+            'PENDING',
+            new DateTime(),
+            $totalAmount,
+            $orderDTO->paymentMethod,
+            $deliveryAddress,
+            $orderItems,
+            $appliedCouponCode // Passa o código do cupom para o construtor do Order
+        );
+
+        return $this->orderRepository->save($order);
+    }
+
+    public function getOrderById(int $orderId): ?Order
+    {
+        return $this->orderRepository->findById($orderId);
+    }
+
+    
+    public function updateOrderStatus(int $orderId, string $newStatus): bool
+{
+    // Lógica para validar o novo status
+    $validStatuses = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED', 'REFUNDED'];
+    if (!in_array(strtoupper($newStatus), $validStatuses)) {
+        throw new \InvalidArgumentException("Status de pedido inválido: {$newStatus}");
+    }
+
+    // Busca o pedido. Assumimos que findById() retorna um objeto Order completo.
+    $order = $this->orderRepository->findById($orderId);
+
+    if (!$order) {
+        throw new \InvalidArgumentException("Pedido com ID {$orderId} não encontrado.");
+    }
+    
+    // Como a classe Order agora tem um objeto Address, não é mais necessário
+    // buscar o endereço separadamente no AddressRepository.
+    $address = $order->getDeliveryAddress();
+
+    if (!$address) {
+        throw new \InvalidArgumentException("Endereço do pedido não encontrado para o pedido ID {$orderId}.");
+    }
+
+    // Se o pedido e o novo status forem válidos, atualize o status.
+    $result = $this->orderRepository->updateStatus($orderId, $newStatus);
+
+    // Lógica de log da operação
+    if ($result) {
+        $this->logService->log(
+    'Status do pedido atualizado.',
+    $orderId,
+    $orderId, // Pass the order ID instead of 'Order'
+    [
+        'old_status' => $order->getStatus(),
+        'new_status' => $newStatus,
+    ]
+);
+    }
+
+    return $result;
+}
+    
+
+    public function cancelOrder(int $orderId): bool
+    {
+        $order = $this->orderRepository->findById($orderId);
+        if (!$order) {
+            throw new Exception("Pedido não encontrado para cancelamento.");
+        }
+        if ($order->getStatus() === 'COMPLETED' || $order->getStatus() === 'CANCELLED') {
+            throw new Exception("Não é possível cancelar um pedido com status 'COMPLETED' ou 'CANCELLED'.");
+        }
+        $order->cancel();
+
+        foreach ($order->getItems() as $item) {
+            $this->productService->releaseStock($item->getProductId(), $item->getQuantity());
+        }
+
+        return $this->orderRepository->update($order);
+    }
+
+    public function getAllOrders(): array
+    {
+        return $this->orderRepository->findAll();
+    }
+
+    public function getOrdersByClientId(int $clientId): array
+    {
+        return $this->orderRepository->getOrdersByClientId($clientId);
+    }
+
+    /**
+     * Gera o recibo de um pedido em PDF.
+     * @param int $orderId O ID do pedido.
+     * @param bool $stream Define se o PDF será enviado diretamente ao navegador ou retornado como string.
+     * @return string|null O conteúdo do PDF se $stream for false, ou null se for true.
+     * @throws Exception Se o pedido não for encontrado.
+     */
+    public function generateOrderReceiptPdf(int $orderId, bool $stream = true): ?string
+    {
+        // 1. Busca o pedido pelo ID. Se não encontrar, lança uma exceção.
+        $order = $this->orderRepository->findById($orderId);
+        if (!$order) {
+            throw new Exception("Ordem com ID {$orderId} não encontrada para gerar comprovante.");
+        }
+
+        // 2. Constrói o HTML do recibo.
+        $htmlContent = $this->buildReceiptHtml($order);
+
+        // 3. Usa o gerador de PDF.
+        // O gerador de PDF agora lida com o streaming internamente.
+        // Se $stream for true, o conteúdo é enviado e a execução termina.
+        // Se $stream for false, o conteúdo é retornado como string.
+        $pdfContent = PdfGenerator::generatePdf($htmlContent, "comprovante_pedido_{$orderId}", $stream);
+
+        return $pdfContent;
+       
+    }
+
+    /**
+     * Constrói o conteúdo HTML para o comprovante do pedido.
+     * @param Order $order
+     * @return string
+     */
+    private function buildReceiptHtml(Order $order): string
+    {
+        $itemsHtml = '';
+        foreach ($order->getItems() as $item) {
+            $itemsHtml .= "<tr>
+                                <td style='border: 1px solid #ddd; padding: 8px;'>{$item->getProductName()}</td>
+                                <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{$item->getQuantity()}</td>
+                                <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>R$ " . number_format($item->getUnitPrice(), 2, ',', '.') . "</td>
+                                <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>R$ " . number_format($item->getTotal(), 2, ',', '.') . "</td>
+                            </tr>";
+        }
+
+        $address = $order->getDeliveryAddress();
+        $addressHtml = "
+            <p><strong>Endereço de Entrega:</strong></p>
+            <p>{$address->getStreet()}, {$address->getNumber()}" . ($address->getComplement() ? " - {$address->getComplement()}" : "") . "</p>
+            <p>{$address->getCity()} - {$address->getState()}, {$address->getZipCode()}</p>
+            <p>{$address->getCountry()}</p>
+        ";
+
+        return "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <title>Comprovante de Pedido #{$order->getId()}</title>
+            <style>
+                body { font-family: 'DejaVu Sans', sans-serif; margin: 20px; }
+                .container { width: 100%; max-width: 800px; margin: auto; border: 1px solid #eee; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                h1 { text-align: center; color: #333; }
+                .header, .footer { text-align: center; margin-top: 20px; font-size: 0.9em; color: #555; }
+                .details-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                .details-table th, .details-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                .details-table th { background-color: #f2f2f2; }
+                .total { text-align: right; margin-top: 20px; font-size: 1.2em; font-weight: bold; }
+                .section-title { margin-top: 30px; margin-bottom: 10px; font-size: 1.1em; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <h1>Mercato - Comprovante de Pedido</h1>
+                <p><strong>Número do Pedido:</strong> #{$order->getId()}</p>
+                <p><strong>Cliente ID:</strong> {$order->getClientId()}</p>
+                <p><strong>Data do Pedido:</strong> {$order->getOrderDate()->format('d/m/Y H:i:s')}</p>
+                <p><strong>Método de Pagamento:</strong> {$order->getPaymentMethod()}</p>
+                <p><strong>Status:</strong> {$order->getStatus()}</p>
+                " . ($order->getCouponCode() ? "<p><strong>Cupom Aplicado:</strong> {$order->getCouponCode()}</p>" : "") . "
+
+                <div class='section-title'>Itens do Pedido:</div>
+                <table class='details-table'>
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th style='text-align: center;'>Quantidade</th>
+                            <th style='text-align: right;'>Preço Unitário</th>
+                            <th style='text-align: right;'>Total Item</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {$itemsHtml}
+                    </tbody>
+                </table>
+
+                <p class='total'>Total do Pedido: R$ " . number_format($order->getTotalAmount(), 2, ',', '.') . "</p>
+
+                <div class='section-title'>Dados de Entrega:</div>
+                {$addressHtml}
+
+                <div class='footer'>
+                    Obrigado pela sua compra!
+                </div>
+            </div>
+        </body>
+        </html>";
+    }
+}
