@@ -276,7 +276,14 @@ http://localhost:80
 - **Vendedor:** `seller@mercato.com` | Senha: `password123` (hash)
 - **Cliente:** `client@mercato.com` | Senha: `password123` (hash)
 
-<!--
+5. Limpar TUDO do Docker Compose
+**Comando:**  
+```bash
+docker-compose down --volumes  # Remove containers, networks E DADOS persistentes
+````
+
+Ou caso queira rodar o schema manualmente:
+
 ### Configurar o banco de dados
 
 0. **Copie o arquivo** do host para o container:
@@ -285,7 +292,7 @@ docker cp mercato/database/schema.sql <container_id_or_name>:/tmp/
 ````
 1. Acesse o container MySQL:
 ```bash
-docker exec -it <container_id_or_name> sh
+docker exec -it <mysql_container_id_or_name> sh
 ```
 2. Conecte ao MySQL:
 ````
@@ -299,8 +306,6 @@ SOURCE /tmp/schema.sql;
 USE mercato_db;
 SHOW TABLES;
 ````
--->
-
 
 
 ## Tecnologias Utilizadas
