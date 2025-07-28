@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Interfaces\OrderRepositoryInterface;
 use App\Interfaces\CouponRepositoryInterface;
+use App\Repository\AddressRepository;
 use App\Model\Order;
 use App\Model\OrderItem;
 use App\Model\Address;
@@ -14,7 +15,8 @@ use DateTime;
 
 class OrderService
 {
-   private OrderRepositoryInterface $orderRepository;
+    private OrderRepositoryInterface $orderRepository;
+    private AddressRepository $addressRepository;
     private ProductService $productService;
     private LogService $logService; // Adicionado LogService
     private CouponRepositoryInterface $couponRepository; // Adicionado CouponRepository
@@ -22,22 +24,18 @@ class OrderService
     // Ordem correta dos argumentos para o construtor
     public function __construct(
         OrderRepositoryInterface $orderRepository,
+        AddressRepository $addressRepository,
         ProductService $productService,
         LogService $logService, // LogService é o terceiro argumento
         CouponRepositoryInterface $couponRepository // CouponRepository é o quarto argumento
     ) {
         $this->orderRepository = $orderRepository;
+        $this->addressRepository = $addressRepository;
         $this->productService = $productService;
         $this->logService = $logService;
         $this->couponRepository = $couponRepository;
     }
-
-
-    public function getOrderById(int $orderId): ?Order
-    {
-        return $this->orderRepository->findById($orderId);
-    }
-
+    
     public function createOrder(OrderCreateDTO $orderDTO): Order
     {
         if (empty($orderDTO->clientId) || empty($orderDTO->paymentMethod) || empty($orderDTO->cartItems)) {
@@ -100,16 +98,18 @@ class OrderService
         $deliveryAddress = null;
         if ($orderDTO->deliveryAddress) {
             $deliveryAddress = new Address(
-            0, // ID deve ser null para um novo endereço
-            $orderDTO->deliveryAddress['street'],
-            $orderDTO->deliveryAddress['number'],
-            $orderDTO->deliveryAddress['complement'] ?? null,
-            $orderDTO->deliveryAddress['neighborhood'],
-            $orderDTO->deliveryAddress['city'],
-            $orderDTO->deliveryAddress['state'],
-            $orderDTO->deliveryAddress['zip_code'], // Este é o zipCode, não o ID
-            $orderDTO->deliveryAddress['country']
-        );
+                0, // id (novo endereço)
+                $orderDTO->clientId, // clientId
+                $orderDTO->deliveryAddress['street'],
+                (string)$orderDTO->deliveryAddress['number'],
+                $orderDTO->deliveryAddress['complement'] ?? '',
+                $orderDTO->deliveryAddress['neighborhood'],
+                $orderDTO->deliveryAddress['city'],
+                $orderDTO->deliveryAddress['state'],
+                $orderDTO->deliveryAddress['zip_code'],
+                $orderDTO->deliveryAddress['country'],
+                $orderDTO->deliveryAddress['recipient'] // recipient
+            );
         } else {
             throw new \InvalidArgumentException("Endereço de entrega é obrigatório.");
         }
@@ -129,15 +129,54 @@ class OrderService
         return $this->orderRepository->save($order);
     }
 
-    public function updateOrderStatus(int $orderId, string $newStatus): bool
+    public function getOrderById(int $orderId): ?Order
     {
-        $order = $this->orderRepository->findById($orderId);
-        if (!$order) {
-            throw new Exception("Pedido não encontrado.");
-        }
-        $order->setStatus($newStatus);
-        return $this->orderRepository->update($order);
+        return $this->orderRepository->findById($orderId);
     }
+
+    
+    public function updateOrderStatus(int $orderId, string $newStatus): bool
+{
+    // Lógica para validar o novo status
+    $validStatuses = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED', 'REFUNDED'];
+    if (!in_array(strtoupper($newStatus), $validStatuses)) {
+        throw new \InvalidArgumentException("Status de pedido inválido: {$newStatus}");
+    }
+
+    // Busca o pedido. Assumimos que findById() retorna um objeto Order completo.
+    $order = $this->orderRepository->findById($orderId);
+
+    if (!$order) {
+        throw new \InvalidArgumentException("Pedido com ID {$orderId} não encontrado.");
+    }
+    
+    // Como a classe Order agora tem um objeto Address, não é mais necessário
+    // buscar o endereço separadamente no AddressRepository.
+    $address = $order->getDeliveryAddress();
+
+    if (!$address) {
+        throw new \InvalidArgumentException("Endereço do pedido não encontrado para o pedido ID {$orderId}.");
+    }
+
+    // Se o pedido e o novo status forem válidos, atualize o status.
+    $result = $this->orderRepository->updateStatus($orderId, $newStatus);
+
+    // Lógica de log da operação
+    if ($result) {
+        $this->logService->log(
+    'Status do pedido atualizado.',
+    $orderId,
+    $orderId, // Pass the order ID instead of 'Order'
+    [
+        'old_status' => $order->getStatus(),
+        'new_status' => $newStatus,
+    ]
+);
+    }
+
+    return $result;
+}
+    
 
     public function cancelOrder(int $orderId): bool
     {
