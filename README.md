@@ -472,8 +472,8 @@ src/views/
 - [x] Checkout com PIX, débito, crédito
 - [x] Reserva de estoque do último item
 - [x] Cancelamento de reserva após 2 minutos
-- [x] Histórico de compras e repetição
-- [x] Geração de comprovante em PDF
+- [x] Lista das compras
+- [ ] Geração de comprovante em PDF
 
 ### Funcionalidades do Usuário Admin/Vendedor
 
@@ -486,8 +486,8 @@ src/views/
 
 ### Cupons e Descontos
 
-- [x] Aplicação de cupons no checkout
-- [x] Descontos em tempo real
+- [ ] Aplicação de cupons no checkout
+- [ ] Descontos em tempo real
 
 ### Segurança
 
@@ -496,19 +496,12 @@ src/views/
 - [x] Sessão protegida em todas as rotas privadas
 - [x] Controle de acesso por tipo de usuário
 
-### Testes
-
-- [x] PHPUnit configurado
-- [x] Testes para Produto, Cliente e Compra
-- [x] Cobertura de regras de negócio (reserva, carrinho, compra)
-
 ---
 
 ## 💡 Bônus Implementados (Opcional)
 
 - [x] Sistema de logs administrativos
 - [x] Paginação do produtos
-- [x] Testes
 - [x] Feedback visual com Bootstrap (alertas)
 
 
