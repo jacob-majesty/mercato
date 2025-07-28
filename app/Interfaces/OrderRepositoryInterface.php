@@ -22,4 +22,6 @@ interface OrderRepositoryInterface
 
     public function hydrateOrder(array $orderData): Order;
     public function findOrderItemsByOrderId(int $orderId): array;
+
+    public function updateStatus(int $orderId, string $newStatus): bool;
 }

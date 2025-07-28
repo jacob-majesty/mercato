@@ -22,98 +22,139 @@ class OrderRepository implements OrderRepositoryInterface
 {
     private PDO $pdo;
     private AddressRepository $addressRepository;
+    private ProductRepository $productRepository;
 
-    public function __construct(PDO $pdo, AddressRepository $addressRepository)
+    public function __construct(PDO $pdo, AddressRepository $addressRepository, ProductRepository $productRepository)
     {
         $this->pdo = $pdo;
         $this->addressRepository = $addressRepository;
+        $this->productRepository = $productRepository;
+
     }
 
        
-    public function save(Order $order): Order
+     public function save(Order $order): Order
     {
         $this->pdo->beginTransaction();
         try {
-            // 1. Salvar ou obter ID do Endereço delegando ao AddressRepository
-            $address = $this->addressRepository->save($order->getDeliveryAddress());
-            $order->setDeliveryAddress($address);
-
-            // 2. Salvar o Pedido
-            $sql = "INSERT INTO orders (client_id, status, order_date, total_amount, payment_method, address_id, coupon_code, discount_amount, created_at, updated_at) VALUES (:client_id, :status, :order_date, :total_amount, :payment_method, :address_id, :coupon_code, :discount_amount, :created_at, :updated_at)";
+            // Corrigido: Chama o save do AddressRepository, que deve retornar o objeto Address com ID.
+            $savedAddress = $this->addressRepository->save($order->getDeliveryAddress());
+            
+            // Define o objeto Address no Order, garantindo que o tipo está correto.
+            $order->setDeliveryAddress($savedAddress);
+            
+            $sql = "INSERT INTO orders (client_id, status, order_date, total_amount, payment_method, address_id, coupon_code, discount_amount)
+                    VALUES (:clientId, :status, :orderDate, :totalAmount, :paymentMethod, :addressId, :couponCode, :discountAmount)";
 
             $stmt = $this->pdo->prepare($sql);
-            $now = (new DateTime())->format('Y-m-d H:i:s');
-
-            $stmt->bindValue(':client_id', $order->getClientId(), PDO::PARAM_INT);
+            $stmt->bindValue(':clientId', $order->getClientId());
             $stmt->bindValue(':status', $order->getStatus());
-            $stmt->bindValue(':order_date', $order->getOrderDate()->format('Y-m-d H:i:s'));
-            $stmt->bindValue(':total_amount', $order->getTotalAmount());
-            $stmt->bindValue(':payment_method', $order->getPaymentMethod());
-            $stmt->bindValue(':address_id', $order->getDeliveryAddress()->getId(), PDO::PARAM_INT);
-            $stmt->bindValue(':coupon_code', $order->getCouponCode());
-            $stmt->bindValue(':discount_amount', $order->getDiscountAmount());
-            $stmt->bindValue(':created_at', $now);
-            $stmt->bindValue(':updated_at', $now);
-
+            $stmt->bindValue(':orderDate', $order->getOrderDate()->format('Y-m-d H:i:s'));
+            $stmt->bindValue(':totalAmount', $order->getTotalAmount());
+            $stmt->bindValue(':paymentMethod', $order->getPaymentMethod());
+            $stmt->bindValue(':addressId', $order->getDeliveryAddress()->getId());
+            $stmt->bindValue(':couponCode', $order->getCouponCode());
+            $stmt->bindValue(':discountAmount', $order->getDiscountAmount());
             $stmt->execute();
-            $order->setId((int)$this->pdo->lastInsertId());
+            
+            $orderId = $this->pdo->lastInsertId();
+            $order->setId((int) $orderId);
 
-            // 3. Salvar os Itens do Pedido
+            // Salva os itens do pedido
             foreach ($order->getItems() as $item) {
-                $sqlItem = "INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price) VALUES (:orderId, :productId, :productName, :quantity, :unitPrice)";
-                $stmtItem = $this->pdo->prepare($sqlItem);
-                $stmtItem->bindValue(':orderId', $order->getId(), PDO::PARAM_INT);
-                $stmtItem->bindValue(':productId', $item->getProductId(), PDO::PARAM_INT);
-                $stmtItem->bindValue(':productName', $item->getProductName());
-                $stmtItem->bindValue(':quantity', $item->getQuantity(), PDO::PARAM_INT);
-                $stmtItem->bindValue(':unitPrice', $item->getUnitPrice());
-                $stmtItem->execute();
+                $item->setOrderId((int) $orderId);
+                $this->saveOrderItem($item);
             }
-
+            
             $this->pdo->commit();
             return $order;
+
         } catch (Exception $e) {
             $this->pdo->rollBack();
-            throw $e;
+            throw new Exception("Erro ao salvar pedido: " . $e->getMessage());
         }
     }
 
-    public function findById(int $id): ?Order
+     /**
+     * Salva um item do pedido no banco de dados.
+     * Corrigido: Este método foi adicionado para resolver o erro "Call to unknown method".
+     * @param OrderItem $item
+     * @return bool
+     */
+    private function saveOrderItem(OrderItem $item): bool
     {
-        // Adicionado 'o.coupon_code' na query de SELECT
-        $sql = "SELECT o.*, o.coupon_code, a.street, a.number, a.complement, a.state, a.country, a.city, a.zip_code, a.id as address_id
+        $sql = "INSERT INTO order_items (order_id, product_id, quantity, price)
+                VALUES (:orderId, :productId, :quantity, :price)";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':orderId', $item->getOrderId());
+        $stmt->bindValue(':productId', $item->getProductId());
+        $stmt->bindValue(':quantity', $item->getQuantity());
+        $stmt->bindValue(':price', $item->getUnitPrice());
+        return $stmt->execute();
+    }
+    
+
+    /**
+     * @param int $orderId
+     * @param string $newStatus
+     * @return bool
+     */
+    public function updateStatus(int $orderId, string $newStatus): bool
+    {
+        $sql = "UPDATE orders SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':status', $newStatus);
+        $stmt->bindValue(':id', $orderId);
+        return $stmt->execute();
+    }
+
+    
+    public function findById(int $orderId): ?Order
+    {
+        $sql = "SELECT 
+                    o.*, 
+                    a.id AS address_id, a.client_id AS address_client_id, a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a.zip_code, a.country, a.recipient
                 FROM orders o
                 JOIN addresses a ON o.address_id = a.id
                 WHERE o.id = :id";
+        
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt->execute(['id' => $orderId]);
         $orderData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$orderData) {
             return null;
         }
 
-        return $this->hydrateOrder($orderData);
+        $orderItems = $this->findOrderItemsByOrderId($orderId);
+        
+        return $this->mapToOrder($orderData, $orderItems);
     }
-
+    
     public function findAll(): array
     {
-        // Adicionado 'o.coupon_code' na query de SELECT
-        $sql = "SELECT o.*, o.coupon_code, a.street, a.number, a.complement, a.state, a.country, a.city, a.zip_code, a.id as address_id
-                FROM orders o
-                JOIN addresses a ON o.address_id = a.id";
-        $stmt = $this->pdo->query($sql);
-        $ordersData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+        $stmt = $this->pdo->query("SELECT * FROM orders ORDER BY order_date DESC");
         $orders = [];
-        foreach ($ordersData as $orderData) {
-            $orders[] = $this->hydrateOrder($orderData);
+        while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $orders[] = $this->hydrateOrder($data);
         }
         return $orders;
     }
 
-    
+    /**
+     * @inheritDoc
+     */
+    public function getOrdersByClientId(int $clientId): array
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM orders WHERE client_id = :client_id ORDER BY order_date DESC");
+        $stmt->execute([':client_id' => $clientId]);
+        $orders = [];
+        while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $orders[] = $this->hydrateOrder($data);
+        }
+        return $orders;
+    }
+
     public function update(Order $order): bool
     {
         $this->pdo->beginTransaction();
@@ -149,13 +190,13 @@ class OrderRepository implements OrderRepositoryInterface
     {
         $this->pdo->beginTransaction();
         try {
-            $stmtItems = $this->pdo->prepare("DELETE FROM order_items WHERE order_id = :orderId");
-            $stmtItems->bindValue(':orderId', $id, PDO::PARAM_INT);
-            $stmtItems->execute();
+            // Deletar os itens do pedido primeiro para evitar erro de chave estrangeira
+            $stmtItems = $this->pdo->prepare("DELETE FROM order_items WHERE order_id = :id");
+            $stmtItems->execute([':id' => $id]);
 
+            // Depois, deletar o pedido
             $stmtOrder = $this->pdo->prepare("DELETE FROM orders WHERE id = :id");
-            $stmtOrder->bindValue(':id', $id, PDO::PARAM_INT);
-            $result = $stmtOrder->execute();
+            $result = $stmtOrder->execute([':id' => $id]);
 
             $this->pdo->commit();
             return $result;
@@ -165,28 +206,8 @@ class OrderRepository implements OrderRepositoryInterface
         }
     }
 
-    public function getOrdersByClientId(int $clientId): array
-    {
-        // Adicionado 'o.coupon_code' na query de SELECT
-        $sql = "SELECT o.*, o.coupon_code, a.street, a.number, a.complement, a.state, a.country, a.city, a.zip_code, a.id as address_id
-                FROM orders o
-                JOIN addresses a ON o.address_id = a.id
-                WHERE o.client_id = :clientId";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':clientId', $clientId, PDO::PARAM_INT);
-        $stmt->execute();
-        $ordersData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $orders = [];
-        foreach ($ordersData as $orderData) {
-            $orders[] = $this->hydrateOrder($orderData);
-        }
-        return $orders;
-    }
-
-
-     /**
-     * Mapeia um array de dados do banco de dados para um objeto Order.
+    /**
+     * Hidrata um objeto Order a partir de um array de dados do banco de dados.
      * @param array $data
      * @return Order
      */
@@ -196,47 +217,93 @@ class OrderRepository implements OrderRepositoryInterface
         $items = $this->findOrderItemsByOrderId($data['id']);
 
         return new Order(
-            (int)$data['id'],
-            (int)$data['client_id'],
-            $data['status'],
-            // Verifica se o valor não é null antes de criar o objeto DateTime para evitar o aviso de Deprecated.
+            (int)($data['id'] ?? 0),
+            (int)($data['client_id'] ?? 0),
+            $data['status'] ?? '',
             $data['order_date'] ? new DateTime($data['order_date']) : null,
-            (float)$data['total_amount'],
-            $data['payment_method'],
+            (float)($data['total_amount'] ?? 0.0),
+            $data['payment_method'] ?? '',
             $address,
             $items,
-            $data['coupon_code'],
-            (float)$data['discount_amount'],
-            //  Verifica se o valor não é null antes de criar o objeto DateTime.
+            $data['coupon_code'] ?? null,
+            (float)($data['discount_amount'] ?? 0.0),
             $data['order_created_at'] ? new DateTime($data['order_created_at']) : null,
-            isset($data['order_updated_at']) ? new DateTime($data['order_updated_at']) : null
+            $data['order_updated_at'] ? new DateTime($data['order_updated_at']) : null
         );
     }
-
+    
     /**
      * Helper para buscar os itens de um pedido específico.
      * @param int $orderId O ID do pedido.
      * @return OrderItem[]
      */
+    
     public function findOrderItemsByOrderId(int $orderId): array
     {
-        $sql = "SELECT id, product_id, product_name, quantity, unit_price FROM order_items WHERE order_id = :orderId";
+        $sql = "SELECT oi.*, p.name AS product_name
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = :orderId";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':orderId', $orderId, PDO::PARAM_INT);
-        $stmt->execute();
-        $itemsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $orderItems = [];
-        foreach ($itemsData as $itemData) {
-            $orderItems[] = new OrderItem(
-                $itemData['id'],
-                $orderId,
-                $itemData['product_id'],
-                $itemData['product_name'],
-                $itemData['quantity'],
-                (float)$itemData['unit_price']
+        $stmt->execute(['orderId' => $orderId]);
+        $items = [];
+        while ($itemData = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $items[] = new OrderItem(
+                (int)$itemData['id'],
+                (int)$itemData['order_id'],
+                (int)$itemData['product_id'],
+                $itemData['product_name'], //  Adicionado o nome do produto
+                (int)$itemData['quantity'],
+                (float)$itemData['price']
             );
         }
-        return $orderItems;
+        return $items;
+    }
+    
+    /**
+     * Mapeia um array de dados do banco de dados para um objeto OrderItem.
+     * @param array $data
+     * @return OrderItem
+     */
+    private function hydrateOrderItem(array $data): OrderItem
+    {
+        return new OrderItem(
+            (int)($data['id'] ?? 0),
+            (int)($data['order_id'] ?? 0),
+            (int)($data['product_id'] ?? 0),
+            $data['product_name'] ?? '',
+            (int)($data['quantity'] ?? 0),
+            (float)($data['unit_price'] ?? 0.0)
+        );
+    }
+
+    private function mapToOrder(array $data, array $orderItems): Order
+    {
+        $address = new Address(
+            (int)$data['address_id'],
+            (int)$data['address_client_id'], // client_id agora vem da tabela 'addresses' (a.*)
+            $data['street'] ?? '',
+            (int)($data['number'] ?? 0),
+            $data['complement'] ?? '',
+            $data['neighborhood'] ?? '',
+            $data['city'] ?? '',
+            $data['state'] ?? '',
+            $data['zip_code'] ?? '',
+            $data['country'] ?? '',
+            $data['recipient'] ?? '' // recipient agora vem da tabela 'addresses' (a.*)
+        );
+        
+        return new Order(
+            (int)$data['id'],
+            (int)$data['client_id'],
+            $data['status'],
+            new DateTime($data['order_date']),
+            (float)$data['total_amount'],
+            $data['payment_method'],
+            $address,
+            $orderItems,
+            $data['coupon_code'] ?? null,
+            (float)($data['discount_amount'] ?? 0.0)
+        );
     }
 }
