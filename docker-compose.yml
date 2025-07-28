@@ -30,7 +30,7 @@ services:
       MYSQL_PASSWORD: secret
     volumes:
       - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql # Auto-executa schema
-      - /tmp/mercato_mysql:/var/lib/mysql # Dados efêmeros (limpos no down)
+      - mercato_mysql_data:/var/lib/mysql # Dados efêmeros (limpos no down)
     networks:
       - mercato-network
 
@@ -39,4 +39,4 @@ networks:
     driver: bridge
 
 volumes:
-  db_data:
+  mercato_mysql_data: # Volume gerenciado pelo Docker (removível com -v)
